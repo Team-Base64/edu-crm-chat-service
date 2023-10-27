@@ -6,10 +6,9 @@ import (
 	"net/http"
 	"time"
 
+	conf "main/config"
 	src "main/src"
 	proto "main/src/proto"
-
-	conf "main/config"
 
 	"github.com/gorilla/mux"
 
@@ -64,7 +63,7 @@ func main() {
 	myRouter.PathPrefix("/api/docs").Handler(httpSwagger.WrapHandler)
 	myRouter.Use(loggingAndCORSHeadersMiddleware)
 
-	lis, err := net.Listen("tcp", ":8082")
+	lis, err := net.Listen("tcp", conf.PortGRPC)
 	if err != nil {
 		log.Println("cant listen grpc port", err)
 	}
@@ -77,8 +76,8 @@ func main() {
 	log.Println("starting grpc server at :8082")
 	go server.Serve(lis)
 
-	log.Println("starting web server at :8081")
-	err = http.ListenAndServe(":8081", myRouter)
+	log.Println("starting web server at " + conf.PortWS)
+	err = http.ListenAndServe(conf.PortWS, myRouter)
 
 	if err != nil {
 		log.Println("cant serve", err)
