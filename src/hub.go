@@ -19,7 +19,7 @@ type Hub struct {
 
 func NewHub() *Hub {
 	return &Hub{
-		Broadcast:       make(chan *MessageWebsocket),
+		Broadcast:       make(chan *MessageWebsocket, 100),
 		MessagesToTGBot: make(chan *MessageWebsocket, 100),
 		MessagesToVKBot: make(chan *MessageWebsocket, 100),
 		register:        make(chan *Client),

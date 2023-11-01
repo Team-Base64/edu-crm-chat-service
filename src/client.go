@@ -57,6 +57,7 @@ func (c *Client) readPump() {
 			log.Println(err)
 			return
 		}
+		log.Println("Received mes from websocket: ", "text:", req.Text, "chatid:", req.ChatID)
 		c.hub.chats[req.ChatID] = c
 		c.hub.clientChats[c] = append(c.hub.clientChats[c], req.ChatID)
 		if req.ChatID == 1 {
@@ -97,7 +98,7 @@ func (c *Client) writePump() {
 			w.Write(req)
 			c.hub.chats[message.ChatID] = c
 			c.hub.clientChats[c] = append(c.hub.clientChats[c], message.ChatID)
-			log.Println("send mes to bot: ", req)
+			log.Println("send mes to websocket: ", message)
 
 			if err := w.Close(); err != nil {
 				log.Println(err)
@@ -126,7 +127,7 @@ func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		hub.chats[ch] = client
 		hub.clientChats[client] = append(hub.clientChats[client], ch)
 	}
-
+	log.Println("opened websocket")
 	go client.writePump()
 	go client.readPump()
 }

@@ -2,6 +2,7 @@ package chat
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log"
 
@@ -33,7 +34,7 @@ func NewChatManager(db *pgxpool.Pool, hub *Hub) *ChatManager {
 }
 
 func (sm *ChatManager) AddMessage(in *model.CreateMessage) error {
-	_, err := sm.db.Query(context.Background(), `INSERT INTO messages (chatID, text, isAuthorTeacher, time) VALUES ($1, $2, $3, $4);`, in.ChatID, in.Text, in.IsAuthorTeacher, time.Now().Format("2006.01.02 15:04:05"))
+	_, err := sm.db.Query(context.Background(), `INSERT INTO messages (chatID, text, isAuthorTeacher, time, isRead) VALUES ($1, $2, $3, $4, $5);`, in.ChatID, in.Text, in.IsAuthorTeacher, time.Now().Format("2006.01.02 15:04:05"), in.IsRead)
 	if err != nil {
 		return err
 	}
@@ -43,48 +44,81 @@ func (sm *ChatManager) AddMessage(in *model.CreateMessage) error {
 func (sm *ChatManager) StartChatTG(ch proto.BotChat_StartChatTGServer) error {
 	log.Println("start chat tg")
 	var mockChatID int32 = 1
+	defer log.Println("end chat tg")
+	errSending := errors.New("Empty")
+	//defer return errors.New("GRPC Consume: message channel closed")
+
 	go func() {
 		for {
 			// отправка из вебсокета в бота
 			mes2 := <-sm.hub.MessagesToTGBot
-
-			resp := proto.Message{Text: mes2.Text, ChatID: mockChatID}
-			if err := ch.Send(&resp); err != nil {
-				log.Println(err)
-				if err.Error() == "rpc error: code = Canceled desc = context canceled" {
-					log.Println("breaking grpc stream")
-					break
-					//return nil
-				}
+			if mes2.Text == "" {
 				continue
 			}
 			log.Println("preparing mes to tg bot: ", mes2)
-			err := sm.AddMessage(&model.CreateMessage{Text: resp.Text, ChatID: int(resp.ChatID), IsAuthorTeacher: true})
-			if err != nil {
+			resp := proto.Message{Text: mes2.Text, ChatID: mockChatID}
+			if err := ch.Send(&resp); err != nil {
+				log.Println("!!!!!!!!!")
 				log.Println(err)
+				if err.Error() == "rpc error: code = Canceled desc = context canceled" {
+					log.Println("breaking grpc stream")
+					errSending = err
+					break
+					//return nil
+				}
+				//continue
+				//return err
 			}
+			// err := sm.AddMessage(&model.CreateMessage{Text: resp.Text, ChatID: int(resp.ChatID), IsAuthorTeacher: true, IsRead: true})
+			// if err != nil {
+			// 	log.Println(err)
+			// 	errSending = err
+			// 	break
+			// }
 		}
 	}()
 	for {
+		if errSending.Error() != "Empty" {
+			log.Println("err on sending goroutine: ", errSending)
+			return errSending
+		}
+
+		log.Println("waiting for mes from tg bot: ")
 		//приём сообщений от бота
 		req, err := ch.Recv()
 		if err == io.EOF {
-			log.Println("exit")
-			return nil
+			log.Println("exit tg stream")
+			return err
 		}
 		if err != nil {
-			log.Printf("receive error %v", err)
+			log.Println("2!!!!!!!!!")
+			log.Println(err)
 			if err.Error() == "rpc error: code = Canceled desc = context canceled" {
 				log.Println("breaking grpc stream")
-				return nil
+				return err
 			}
-			continue
+			//continue
+			//break
+			return err
 		}
 		log.Println("received mes from tg bot: ", req)
 		mes := MessageWebsocket{Text: req.Text, ChatID: mockChatID, Channel: "chat"}
-		sm.hub.Broadcast <- &mes
-		sm.AddMessage(&model.CreateMessage{Text: mes.Text, ChatID: int(mes.ChatID), IsAuthorTeacher: false})
+		if sm.hub.chats[mes.ChatID] != nil {
+			log.Println("routing mes from tg bot to hub: ", req)
+			sm.hub.Broadcast <- &mes
+			log.Println("routing mes from tg bot to hub + added to broadcast: ", req)
+			// err = sm.AddMessage(&model.CreateMessage{Text: mes.Text, ChatID: int(mes.ChatID), IsAuthorTeacher: false, IsRead: false})
+			// if err != nil {
+			// 	log.Println(err)
+			// 	return err
+			// }
+			log.Println("routing mes from tg bot to hub + added to db: ", req)
+		}
+
+		//break
 	}
+	return nil
+	//return errors.New("GRPC Consume: message channel closed")
 }
 
 func (sm *ChatManager) StartChatVK(ch proto.BotChat_StartChatVKServer) error {
@@ -106,14 +140,14 @@ func (sm *ChatManager) StartChatVK(ch proto.BotChat_StartChatVKServer) error {
 				continue
 			}
 			log.Println("preparing mes to vk bot: ", mes2)
-			sm.AddMessage(&model.CreateMessage{Text: resp.Text, ChatID: int(resp.ChatID), IsAuthorTeacher: true})
+			sm.AddMessage(&model.CreateMessage{Text: resp.Text, ChatID: int(resp.ChatID), IsAuthorTeacher: true, IsRead: true})
 		}
 	}()
 	for {
 		//приём сообщений от бота
 		req, err := ch.Recv()
 		if err == io.EOF {
-			log.Println("exit")
+			log.Println("exit vk stream")
 			return nil
 		}
 		if err != nil {
@@ -128,6 +162,6 @@ func (sm *ChatManager) StartChatVK(ch proto.BotChat_StartChatVKServer) error {
 		log.Println("received mes from vk bot: ", req)
 		mes := MessageWebsocket{Text: req.Text, ChatID: mockChatID, Channel: "chat"}
 		sm.hub.Broadcast <- &mes
-		sm.AddMessage(&model.CreateMessage{Text: mes.Text, ChatID: int(mes.ChatID), IsAuthorTeacher: false})
+		sm.AddMessage(&model.CreateMessage{Text: mes.Text, ChatID: int(mes.ChatID), IsAuthorTeacher: false, IsRead: false})
 	}
 }

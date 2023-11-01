@@ -47,7 +47,7 @@ func main() {
 	server := grpc.NewServer(
 		grpc.MaxMsgSize(1024*1024),
 		grpc.MaxConcurrentStreams(35),
-		grpc.KeepaliveParams(keepalive.ServerParameters{Time: 10 * time.Second, Timeout: 5 * time.Second}),
+		grpc.KeepaliveParams(keepalive.ServerParameters{Time: 1 * time.Second, Timeout: 5 * time.Second}),
 	)
 	proto.RegisterBotChatServer(server, src.NewChatManager(db, hub))
 	log.Println("starting grpc server at :8082")
