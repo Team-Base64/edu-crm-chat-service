@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"log"
 	"net"
 	"net/http"
@@ -13,9 +12,12 @@ import (
 	conf "main/config"
 
 	"github.com/gorilla/mux"
+
+	"database/sql"
+
 	_ "github.com/jackc/pgx/v4/stdlib"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/grpc"
+
 	"google.golang.org/grpc/keepalive"
 )
 
@@ -24,16 +26,17 @@ func main() {
 
 	urlDB := "postgres://" + conf.DBSPuser + ":" + conf.DBPassword + "@" + conf.DBHost + ":" + conf.DBPort + "/" + conf.DBName
 	//urlDB := "postgres://" + os.Getenv("TEST_POSTGRES_USER") + ":" + os.Getenv("TEST_POSTGRES_PASSWORD") + "@" + os.Getenv("TEST_DATABASE_HOST") + ":" + os.Getenv("DB_PORT") + "/" + os.Getenv("TEST_POSTGRES_DB")
-	config, _ := pgxpool.ParseConfig(urlDB)
-	config.MaxConns = 70
-	db, err := pgxpool.New(context.Background(), config.ConnString())
-
+	db, err := sql.Open("pgx", urlDB)
 	if err != nil {
 		log.Println("could not connect to database")
+	}
+	defer db.Close()
+
+	if err := db.Ping(); err != nil {
+		log.Println("unable to reach database ", err)
 	} else {
 		log.Println("database is reachable")
 	}
-	defer db.Close()
 
 	hub := src.NewHub()
 	go hub.Run()
@@ -45,7 +48,7 @@ func main() {
 		log.Println("cant listen grpc port", err)
 	}
 	server := grpc.NewServer(
-		grpc.MaxMsgSize(1024*1024),
+		grpc.MaxRecvMsgSize(1024*1024),
 		grpc.MaxConcurrentStreams(35),
 		grpc.KeepaliveParams(keepalive.ServerParameters{Time: 1 * time.Second, Timeout: 5 * time.Second}),
 	)

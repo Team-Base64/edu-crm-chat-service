@@ -1,12 +1,10 @@
 package chat
 
 import (
-	"context"
 	"errors"
 	"io"
 	"log"
 
-	"sync"
 	"time"
 
 	"main/model"
@@ -14,27 +12,26 @@ import (
 
 	proto "main/src/proto"
 
+	"database/sql"
+
 	_ "github.com/jackc/pgx/v4/stdlib"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type ChatManager struct {
 	proto.UnimplementedBotChatServer
-	db  *pgxpool.Pool
-	mu  sync.RWMutex
+	db  *sql.DB
 	hub *Hub
 }
 
-func NewChatManager(db *pgxpool.Pool, hub *Hub) *ChatManager {
+func NewChatManager(db *sql.DB, hub *Hub) *ChatManager {
 	return &ChatManager{
-		mu:  sync.RWMutex{},
 		db:  db,
 		hub: hub,
 	}
 }
 
 func (sm *ChatManager) AddMessage(in *model.CreateMessage) error {
-	_, err := sm.db.Query(context.Background(), `INSERT INTO messages (chatID, text, isAuthorTeacher, time, isRead) VALUES ($1, $2, $3, $4, $5);`, in.ChatID, in.Text, in.IsAuthorTeacher, time.Now().Format("2006.01.02 15:04:05"), in.IsRead)
+	_, err := sm.db.Exec(`INSERT INTO messages (chatID, text, isAuthorTeacher, time, isRead) VALUES ($1, $2, $3, $4, $5);`, in.ChatID, in.Text, in.IsAuthorTeacher, time.Now().Format("2006.01.02 15:04:05"), in.IsRead)
 	if err != nil {
 		return err
 	}
@@ -62,10 +59,12 @@ func (sm *ChatManager) StartChatTG(ch proto.BotChat_StartChatTGServer) error {
 				log.Println(err)
 				if err.Error() == "rpc error: code = Canceled desc = context canceled" {
 					log.Println("breaking grpc stream")
-					errSending = err
-					break
+
+					//break
 					//return nil
 				}
+				errSending = err
+				break
 				//continue
 				//return err
 			}
@@ -107,17 +106,17 @@ func (sm *ChatManager) StartChatTG(ch proto.BotChat_StartChatTGServer) error {
 			log.Println("routing mes from tg bot to hub: ", req)
 			sm.hub.Broadcast <- &mes
 			log.Println("routing mes from tg bot to hub + added to broadcast: ", req)
-			// err = sm.AddMessage(&model.CreateMessage{Text: mes.Text, ChatID: int(mes.ChatID), IsAuthorTeacher: false, IsRead: false})
-			// if err != nil {
-			// 	log.Println(err)
-			// 	return err
-			// }
+			err = sm.AddMessage(&model.CreateMessage{Text: mes.Text, ChatID: int(mes.ChatID), IsAuthorTeacher: false, IsRead: false})
+			if err != nil {
+				log.Println(err)
+				return err
+			}
 			log.Println("routing mes from tg bot to hub + added to db: ", req)
 		}
 
 		//break
 	}
-	return nil
+	//return nil
 	//return errors.New("GRPC Consume: message channel closed")
 }
 
