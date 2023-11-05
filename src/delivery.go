@@ -84,11 +84,39 @@ func (api *Handler) SetAttach(w http.ResponseWriter, r *http.Request) {
 
 	file, _, err := r.FormFile("file")
 	if err != nil {
-		log.Println("error parse file")
-		ReturnErrorJSON(w, e.ErrServerError500, 500)
+		log.Println("error parse file, err:", err)
+		ReturnErrorJSON(w, e.ErrBadRequest400, 400)
 		return
 	}
 	defer file.Close()
+
+	fileHeader := make([]byte, 512)
+
+	// Copy the headers into the FileHeader buffer
+	if _, err := file.Read(fileHeader); err != nil {
+		ReturnErrorJSON(w, e.ErrBadRequest400, 400)
+		return
+	}
+
+	// set position back to start.
+	if _, err := file.Seek(0, 0); err != nil {
+		ReturnErrorJSON(w, e.ErrBadRequest400, 400)
+		return
+	}
+	log.Println(http.DetectContentType(fileHeader))
+	fileExt := ""
+	switch http.DetectContentType(fileHeader) {
+	case "image/jpeg":
+		fileExt = ".jpg"
+	case "image/png":
+		fileExt = ".png"
+	case "application/pdf":
+		fileExt = ".pdf"
+	default:
+		log.Println("error not allowed file extension")
+		ReturnErrorJSON(w, e.ErrBadRequest400, 400)
+		return
+	}
 
 	s := chatIDs + time.Now().Format("2006.01.02 15:04:05")
 
@@ -97,7 +125,7 @@ func (api *Handler) SetAttach(w http.ResponseWriter, r *http.Request) {
 	h.Write([]byte(s))
 	attachNum := hex.EncodeToString(h.Sum(nil))
 
-	fileName := "./filestorage/attaches/attach" + attachNum + ".jpg"
+	fileName := "./filestorage/attaches/attach_" + attachNum + fileExt
 	f, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		log.Println("error create/open file")
@@ -113,7 +141,7 @@ func (api *Handler) SetAttach(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fileAddr := "http://127.0.0.1:8081/filestorage/attaches/attach" + attachNum + ".jpg"
+	fileAddr := "http://127.0.0.1:8081/filestorage/attaches/attach_" + attachNum + fileExt
 	mes := &m.MessageWebsocket{Text: text + "\n" + fileAddr, ChatID: int32(chatID)}
 	log.Println("Sending mes with attach to bot: ", "text:", mes.Text, "chatid:", mes.ChatID)
 

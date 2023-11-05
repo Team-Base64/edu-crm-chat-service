@@ -24,6 +24,17 @@ import (
 	"google.golang.org/grpc/keepalive"
 )
 
+func loggingAndCORSHeadersMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Println(r.RequestURI, r.Method)
+		for header := range conf.Headers {
+			w.Header().Set(header, conf.Headers[header])
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	myRouter := mux.NewRouter()
 
@@ -51,6 +62,7 @@ func main() {
 	myRouter.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) { src.ServeWs(hub, w, r) })
 	myRouter.HandleFunc("/api/attach", Handler.SetAttach).Methods(http.MethodPost, http.MethodOptions)
 	myRouter.PathPrefix("/api/docs").Handler(httpSwagger.WrapHandler)
+	myRouter.Use(loggingAndCORSHeadersMiddleware)
 
 	lis, err := net.Listen("tcp", ":8082")
 	if err != nil {
