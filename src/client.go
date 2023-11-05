@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	m "main/domain/model"
+
 	"github.com/gorilla/websocket"
 )
 
@@ -31,7 +33,7 @@ var upgrader = websocket.Upgrader{
 type Client struct {
 	hub  *Hub
 	conn *websocket.Conn
-	send chan *MessageWebsocket
+	send chan *m.MessageWebsocket
 }
 
 func (c *Client) readPump() {
@@ -51,7 +53,7 @@ func (c *Client) readPump() {
 			}
 			break
 		}
-		var req *MessageWebsocket
+		var req *m.MessageWebsocket
 		err = json.Unmarshal(message, &req)
 		if err != nil {
 			log.Println(err)
@@ -119,7 +121,7 @@ func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
-	client := &Client{hub: hub, conn: conn, send: make(chan *MessageWebsocket)}
+	client := &Client{hub: hub, conn: conn, send: make(chan *m.MessageWebsocket)}
 	client.hub.register <- client
 	//chats:= GetAllUserChats
 	curChats := []int32{1, 2}

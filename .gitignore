@@ -21,3 +21,5 @@
 go.work
 
 /config
+commands_for_db.txt
+/filestorage

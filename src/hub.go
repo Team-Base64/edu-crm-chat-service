@@ -1,16 +1,14 @@
 package chat
 
-type MessageWebsocket struct {
-	Text    string `json:"text"`
-	ChatID  int32  `json:"chatid"`
-	Channel string `json:"channel,omitempty"`
-}
+import (
+	m "main/domain/model"
+)
 
 type Hub struct {
 	clients         map[*Client]bool
-	Broadcast       chan *MessageWebsocket
-	MessagesToTGBot chan *MessageWebsocket
-	MessagesToVKBot chan *MessageWebsocket
+	Broadcast       chan *m.MessageWebsocket
+	MessagesToTGBot chan *m.MessageWebsocket
+	MessagesToVKBot chan *m.MessageWebsocket
 	register        chan *Client
 	unregister      chan *Client
 	chats           map[int32]*Client // соединение по id чата
@@ -19,9 +17,9 @@ type Hub struct {
 
 func NewHub() *Hub {
 	return &Hub{
-		Broadcast:       make(chan *MessageWebsocket, 100),
-		MessagesToTGBot: make(chan *MessageWebsocket, 100),
-		MessagesToVKBot: make(chan *MessageWebsocket, 100),
+		Broadcast:       make(chan *m.MessageWebsocket, 100),
+		MessagesToTGBot: make(chan *m.MessageWebsocket, 100),
+		MessagesToVKBot: make(chan *m.MessageWebsocket, 100),
 		register:        make(chan *Client),
 		unregister:      make(chan *Client),
 		clientChats:     make(map[*Client][]int32),

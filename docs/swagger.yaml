@@ -1,0 +1,63 @@
+basePath: /api
+definitions:
+  model.Error:
+    properties:
+      error: {}
+    type: object
+  model.Response:
+    properties:
+      body: {}
+    type: object
+host: 127.0.0.1:8081
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: EDUCRM back chat server.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: TCRA API
+  version: "1.0"
+paths:
+  /attach:
+    post:
+      consumes:
+      - multipart/form-data
+      description: sets teacher's attach
+      operationId: setAttach
+      parameters:
+      - description: teacher's attach
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: text
+        in: query
+        name: text
+        type: string
+      - description: Chat id
+        in: query
+        name: chatid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ok
+          schema:
+            $ref: '#/definitions/model.Response'
+        "401":
+          description: unauthorized - Access token is missing or invalid
+          schema:
+            $ref: '#/definitions/model.Error'
+        "500":
+          description: internal Server Error - Request is valid but operation failed
+            at server side
+          schema:
+            $ref: '#/definitions/model.Error'
+      summary: Set teacher's attach
+swagger: "2.0"

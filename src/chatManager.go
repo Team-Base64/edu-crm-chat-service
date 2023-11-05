@@ -5,37 +5,25 @@ import (
 	"io"
 	"log"
 
-	"time"
-
-	"main/model"
+	m "main/domain/model"
 	//chat "main/src"
 
 	proto "main/src/proto"
-
-	"database/sql"
 
 	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
 type ChatManager struct {
 	proto.UnimplementedBotChatServer
-	db  *sql.DB
-	hub *Hub
+	store StoreInterface
+	hub   *Hub
 }
 
-func NewChatManager(db *sql.DB, hub *Hub) *ChatManager {
+func NewChatManager(store StoreInterface, hub *Hub) *ChatManager {
 	return &ChatManager{
-		db:  db,
-		hub: hub,
+		store: store,
+		hub:   hub,
 	}
-}
-
-func (sm *ChatManager) AddMessage(in *model.CreateMessage) error {
-	_, err := sm.db.Exec(`INSERT INTO messages (chatID, text, isAuthorTeacher, time, isRead) VALUES ($1, $2, $3, $4, $5);`, in.ChatID, in.Text, in.IsAuthorTeacher, time.Now().Format("2006.01.02 15:04:05"), in.IsRead)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func (sm *ChatManager) StartChatTG(ch proto.BotChat_StartChatTGServer) error {
@@ -101,12 +89,12 @@ func (sm *ChatManager) StartChatTG(ch proto.BotChat_StartChatTGServer) error {
 			return err
 		}
 		log.Println("received mes from tg bot: ", req)
-		mes := MessageWebsocket{Text: req.Text, ChatID: mockChatID, Channel: "chat"}
+		mes := m.MessageWebsocket{Text: req.Text, ChatID: mockChatID, Channel: "chat"}
 		if sm.hub.chats[mes.ChatID] != nil {
 			log.Println("routing mes from tg bot to hub: ", req)
 			sm.hub.Broadcast <- &mes
 			log.Println("routing mes from tg bot to hub + added to broadcast: ", req)
-			err = sm.AddMessage(&model.CreateMessage{Text: mes.Text, ChatID: int(mes.ChatID), IsAuthorTeacher: false, IsRead: false})
+			err = sm.store.AddMessage(&m.CreateMessage{Text: mes.Text, ChatID: int(mes.ChatID), IsAuthorTeacher: false, IsRead: false})
 			if err != nil {
 				log.Println(err)
 				return err
@@ -139,7 +127,7 @@ func (sm *ChatManager) StartChatVK(ch proto.BotChat_StartChatVKServer) error {
 				continue
 			}
 			log.Println("preparing mes to vk bot: ", mes2)
-			sm.AddMessage(&model.CreateMessage{Text: resp.Text, ChatID: int(resp.ChatID), IsAuthorTeacher: true, IsRead: true})
+			sm.store.AddMessage(&m.CreateMessage{Text: resp.Text, ChatID: int(resp.ChatID), IsAuthorTeacher: true, IsRead: true})
 		}
 	}()
 	for {
@@ -159,8 +147,8 @@ func (sm *ChatManager) StartChatVK(ch proto.BotChat_StartChatVKServer) error {
 			return nil
 		}
 		log.Println("received mes from vk bot: ", req)
-		mes := MessageWebsocket{Text: req.Text, ChatID: mockChatID, Channel: "chat"}
+		mes := m.MessageWebsocket{Text: req.Text, ChatID: mockChatID, Channel: "chat"}
 		sm.hub.Broadcast <- &mes
-		sm.AddMessage(&model.CreateMessage{Text: mes.Text, ChatID: int(mes.ChatID), IsAuthorTeacher: false, IsRead: false})
+		sm.store.AddMessage(&m.CreateMessage{Text: mes.Text, ChatID: int(mes.ChatID), IsAuthorTeacher: false, IsRead: false})
 	}
 }
