@@ -2,11 +2,11 @@
 // versions:
 // - protoc-gen-go-grpc v1.3.0
 // - protoc             v3.12.4
-// source: microservices/chatServer/gen_files/chat.proto
+// source: src/proto/chat.proto
 
 // export PATH="$PATH:$(go env GOPATH)/bin"
 // go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
-// protoc --go_out=. --go-grpc_out=. --go-grpc_opt=paths=source_relative --go_opt=paths=source_relative microservices/chatServer/gen_files/chat.proto
+// protoc --go_out=. --go-grpc_out=. --go-grpc_opt=paths=source_relative --go_opt=paths=source_relative src/proto/chat.proto
 
 package chat
 
@@ -23,8 +23,9 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	BotChat_StartChatTG_FullMethodName = "/chat.BotChat/StartChatTG"
-	BotChat_StartChatVK_FullMethodName = "/chat.BotChat/StartChatVK"
+	BotChat_StartChatTG_FullMethodName      = "/chat.BotChat/StartChatTG"
+	BotChat_StartChatVK_FullMethodName      = "/chat.BotChat/StartChatVK"
+	BotChat_UploadAttachesTG_FullMethodName = "/chat.BotChat/UploadAttachesTG"
 )
 
 // BotChatClient is the client API for BotChat service.
@@ -33,6 +34,7 @@ const (
 type BotChatClient interface {
 	StartChatTG(ctx context.Context, opts ...grpc.CallOption) (BotChat_StartChatTGClient, error)
 	StartChatVK(ctx context.Context, opts ...grpc.CallOption) (BotChat_StartChatVKClient, error)
+	UploadAttachesTG(ctx context.Context, opts ...grpc.CallOption) (BotChat_UploadAttachesTGClient, error)
 }
 
 type botChatClient struct {
@@ -105,12 +107,47 @@ func (x *botChatStartChatVKClient) Recv() (*Message, error) {
 	return m, nil
 }
 
+func (c *botChatClient) UploadAttachesTG(ctx context.Context, opts ...grpc.CallOption) (BotChat_UploadAttachesTGClient, error) {
+	stream, err := c.cc.NewStream(ctx, &BotChat_ServiceDesc.Streams[2], BotChat_UploadAttachesTG_FullMethodName, opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &botChatUploadAttachesTGClient{stream}
+	return x, nil
+}
+
+type BotChat_UploadAttachesTGClient interface {
+	Send(*FileUploadRequest) error
+	CloseAndRecv() (*FileUploadResponse, error)
+	grpc.ClientStream
+}
+
+type botChatUploadAttachesTGClient struct {
+	grpc.ClientStream
+}
+
+func (x *botChatUploadAttachesTGClient) Send(m *FileUploadRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *botChatUploadAttachesTGClient) CloseAndRecv() (*FileUploadResponse, error) {
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	m := new(FileUploadResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // BotChatServer is the server API for BotChat service.
 // All implementations must embed UnimplementedBotChatServer
 // for forward compatibility
 type BotChatServer interface {
 	StartChatTG(BotChat_StartChatTGServer) error
 	StartChatVK(BotChat_StartChatVKServer) error
+	UploadAttachesTG(BotChat_UploadAttachesTGServer) error
 	mustEmbedUnimplementedBotChatServer()
 }
 
@@ -123,6 +160,9 @@ func (UnimplementedBotChatServer) StartChatTG(BotChat_StartChatTGServer) error {
 }
 func (UnimplementedBotChatServer) StartChatVK(BotChat_StartChatVKServer) error {
 	return status.Errorf(codes.Unimplemented, "method StartChatVK not implemented")
+}
+func (UnimplementedBotChatServer) UploadAttachesTG(BotChat_UploadAttachesTGServer) error {
+	return status.Errorf(codes.Unimplemented, "method UploadAttachesTG not implemented")
 }
 func (UnimplementedBotChatServer) mustEmbedUnimplementedBotChatServer() {}
 
@@ -189,6 +229,32 @@ func (x *botChatStartChatVKServer) Recv() (*Message, error) {
 	return m, nil
 }
 
+func _BotChat_UploadAttachesTG_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(BotChatServer).UploadAttachesTG(&botChatUploadAttachesTGServer{stream})
+}
+
+type BotChat_UploadAttachesTGServer interface {
+	SendAndClose(*FileUploadResponse) error
+	Recv() (*FileUploadRequest, error)
+	grpc.ServerStream
+}
+
+type botChatUploadAttachesTGServer struct {
+	grpc.ServerStream
+}
+
+func (x *botChatUploadAttachesTGServer) SendAndClose(m *FileUploadResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *botChatUploadAttachesTGServer) Recv() (*FileUploadRequest, error) {
+	m := new(FileUploadRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // BotChat_ServiceDesc is the grpc.ServiceDesc for BotChat service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -209,6 +275,11 @@ var BotChat_ServiceDesc = grpc.ServiceDesc{
 			ServerStreams: true,
 			ClientStreams: true,
 		},
+		{
+			StreamName:    "UploadAttachesTG",
+			Handler:       _BotChat_UploadAttachesTG_Handler,
+			ClientStreams: true,
+		},
 	},
-	Metadata: "microservices/chatServer/gen_files/chat.proto",
+	Metadata: "src/proto/chat.proto",
 }
