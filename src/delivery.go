@@ -2,6 +2,7 @@ package chat
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"net/http"
@@ -42,9 +43,10 @@ func NewHandler(store StoreInterface, hub *Hub, fs string) *Handler {
 	}
 }
 
-func ReturnErrorJSON(w http.ResponseWriter, err error, errCode int) {
+func ReturnErrorJSON(w http.ResponseWriter, err error) {
+	errCode, errText := e.CheckError(err)
 	w.WriteHeader(errCode)
-	json.NewEncoder(w).Encode(&model.Error{Error: err.Error()})
+	json.NewEncoder(w).Encode(&model.Error{Error: errText})
 }
 
 // UploadAttach godoc
@@ -71,15 +73,15 @@ func (api *Handler) UploadFile(w http.ResponseWriter, r *http.Request) {
 	case "chat":
 		filePath = api.filestorage + "/chat"
 	default:
-		log.Println("error wrong type query param")
-		ReturnErrorJSON(w, e.ErrBadRequest400, 400)
+		log.Println(e.StacktraceError(errors.New("error wrong type query param")))
+		ReturnErrorJSON(w, e.ErrBadRequest400)
 		return
 	}
 
 	file, _, err := r.FormFile("file")
 	if err != nil {
-		log.Println("error parse file, err:", err)
-		ReturnErrorJSON(w, e.ErrBadRequest400, 400)
+		log.Println(e.StacktraceError(err))
+		ReturnErrorJSON(w, e.ErrBadRequest400)
 		return
 	}
 	defer file.Close()
@@ -88,13 +90,15 @@ func (api *Handler) UploadFile(w http.ResponseWriter, r *http.Request) {
 
 	// Copy the headers into the FileHeader buffer
 	if _, err := file.Read(fileHeader); err != nil {
-		ReturnErrorJSON(w, e.ErrBadRequest400, 400)
+		log.Println(e.StacktraceError(err))
+		ReturnErrorJSON(w, e.ErrBadRequest400)
 		return
 	}
 
 	// set position back to start.
 	if _, err := file.Seek(0, 0); err != nil {
-		ReturnErrorJSON(w, e.ErrBadRequest400, 400)
+		log.Println(e.StacktraceError(err))
+		ReturnErrorJSON(w, e.ErrBadRequest400)
 		return
 	}
 	log.Println(http.DetectContentType(fileHeader))
@@ -108,7 +112,7 @@ func (api *Handler) UploadFile(w http.ResponseWriter, r *http.Request) {
 		fileExt = ".pdf"
 	default:
 		log.Println("error not allowed file extension")
-		ReturnErrorJSON(w, e.ErrBadRequest400, 400)
+		ReturnErrorJSON(w, e.ErrBadRequest400)
 		return
 	}
 
@@ -116,26 +120,24 @@ func (api *Handler) UploadFile(w http.ResponseWriter, r *http.Request) {
 
 	fileName := filePath + "/" + attachNum + fileExt
 	if err := os.MkdirAll(filePath, os.ModePerm); err != nil {
-		log.Println("error create path: ", err)
-		ReturnErrorJSON(w, e.ErrServerError500, 500)
+		log.Println(e.StacktraceError(err))
+		ReturnErrorJSON(w, e.ErrServerError500)
 		return
 	}
 	f, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
-		log.Println("error create/open file: ", err)
-		ReturnErrorJSON(w, e.ErrServerError500, 500)
+		log.Println(e.StacktraceError(err))
+		ReturnErrorJSON(w, e.ErrServerError500)
 		return
 	}
 	defer f.Close()
 
 	_, err = io.Copy(f, file)
 	if err != nil {
-		log.Println("error copy to new file: ", err)
-		ReturnErrorJSON(w, e.ErrServerError500, 500)
+		log.Println(e.StacktraceError(err))
+		ReturnErrorJSON(w, e.ErrServerError500)
 		return
 	}
 
-	fileAddr := filePath[:1] + attachNum + fileExt
-
-	json.NewEncoder(w).Encode(&model.UploadAttachResponse{File: fileAddr})
+	json.NewEncoder(w).Encode(&model.UploadAttachResponse{File: fileName})
 }
