@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"time"
 
 	conf "main/config"
@@ -12,9 +14,7 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"database/sql"
-
-	_ "github.com/jackc/pgx/v4/stdlib"
+	"github.com/jackc/pgx/v5"
 	"google.golang.org/grpc"
 
 	_ "main/docs"
@@ -37,50 +37,49 @@ func loggingAndCORSHeadersMiddleware(next http.Handler) http.Handler {
 func main() {
 	myRouter := mux.NewRouter()
 
-	urlDB := "postgres://" + conf.DBSPuser + ":" + conf.DBPassword + "@" + conf.DBHost + ":" + conf.DBPort + "/" + conf.DBName
-	//config, _ := sql.Open("pgx", os.Getenv(conf.UrlDB))
-	db, err := sql.Open("pgx", urlDB)
+	db, err := pgx.Connect(context.Background(), os.Getenv(conf.UrlDB))
 	if err != nil {
-		log.Println("could not connect to database")
+		log.Fatalln("could not connect to database")
 	}
-	defer db.Close()
+	defer db.Close(context.Background())
 
-	if err := db.Ping(); err != nil {
-		log.Println("unable to reach database ", err)
-	} else {
-		log.Println("database is reachable")
+	if err := db.Ping(context.Background()); err != nil {
+		log.Fatalln("unable to reach database ", err)
 	}
+	log.Println("database is reachable")
 
 	hub := src.NewHub()
 	go hub.Run()
 
 	Store := src.NewStore(db)
-	Handler := src.NewHandler(Store, hub)
+	Handler := src.NewHandler(Store, hub, os.Getenv(conf.BaseFilestorage))
 
-	//myRouter.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { log.Println("main page") })
-	myRouter.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) { src.ServeWs(hub, w, r) })
-	myRouter.HandleFunc("/api/attach", Handler.UploadFile).Methods(http.MethodPost, http.MethodOptions)
-	myRouter.PathPrefix("/api/docs").Handler(httpSwagger.WrapHandler)
+	myRouter.HandleFunc(conf.PathWS, func(w http.ResponseWriter, r *http.Request) { src.ServeWs(hub, w, r) })
+	myRouter.HandleFunc(conf.PathAttach, Handler.UploadFile).Methods(http.MethodPost, http.MethodOptions)
+	myRouter.PathPrefix(conf.PathDocs).Handler(httpSwagger.WrapHandler)
 	myRouter.Use(loggingAndCORSHeadersMiddleware)
 
 	lis, err := net.Listen("tcp", conf.PortGRPC)
 	if err != nil {
-		log.Println("cant listen grpc port", err)
+		log.Fatalln("cant listen grpc port", err)
 	}
 	server := grpc.NewServer(
 		grpc.MaxRecvMsgSize(1024*1024),
 		grpc.MaxConcurrentStreams(35),
-		grpc.KeepaliveParams(keepalive.ServerParameters{Time: 1 * time.Second, Timeout: 5 * time.Second}),
+		grpc.KeepaliveParams(keepalive.ServerParameters{
+			Time:    1 * time.Second,
+			Timeout: 5 * time.Second,
+		}),
 	)
 	proto.RegisterBotChatServer(server, src.NewChatManager(Store, hub))
-	log.Println("starting grpc server at :8082")
+	log.Println("starting grpc server at " + conf.PortGRPC)
 	go server.Serve(lis)
 
 	log.Println("starting web server at " + conf.PortWS)
 	err = http.ListenAndServe(conf.PortWS, myRouter)
 
 	if err != nil {
-		log.Println("cant serve", err)
+		log.Fatalln("cant serve", err)
 	}
 
 }

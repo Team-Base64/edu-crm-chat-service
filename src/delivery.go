@@ -13,8 +13,6 @@ import (
 	"github.com/google/uuid"
 )
 
-var mockTeacherID = 1
-
 // @title TCRA API
 // @version 1.0
 // @description EDUCRM back chat server.
@@ -28,17 +26,19 @@ var mockTeacherID = 1
 // @license.url http://www.apache.org/licenses/LICENSE-2.0.html
 
 // @host 127.0.0.1:8081
-// @BasePath  /api
+// @BasePath  /apichat
 
 type Handler struct {
-	store StoreInterface
-	hub   *Hub
+	store       StoreInterface
+	hub         *Hub
+	filestorage string
 }
 
-func NewHandler(store StoreInterface, hub *Hub) *Handler {
+func NewHandler(store StoreInterface, hub *Hub, fs string) *Handler {
 	return &Handler{
-		store: store,
-		hub:   hub,
+		store:       store,
+		hub:         hub,
+		filestorage: fs,
 	}
 }
 
@@ -65,30 +65,16 @@ func (api *Handler) UploadFile(w http.ResponseWriter, r *http.Request) {
 	filePath := ""
 	switch typeS {
 	case "homework":
-		filePath = "./filestorage/homeworks/homework_"
+		filePath = api.filestorage + "/homeworks"
 	case "solution":
-		filePath = "./filestorage/solutions/solution_"
+		filePath = api.filestorage + "/solutions"
 	case "chat":
-		filePath = "./filestorage/chat/attach_"
+		filePath = api.filestorage + "/chat"
 	default:
 		log.Println("error wrong type query param")
 		ReturnErrorJSON(w, e.ErrBadRequest400, 400)
 		return
 	}
-	//chatIDs := r.URL.Query().Get("chatid")
-
-	// text, err := url.QueryUnescape(textS)
-	// if err != nil {
-	// 	log.Println("error: ", err)
-	// 	ReturnErrorJSON(w, e.ErrBadRequest400, 400)
-	// }
-
-	// chatID, err := strconv.Atoi(chatIDs)
-	// if err != nil {
-	// 	log.Println("error: ", err)
-	// 	ReturnErrorJSON(w, e.ErrBadRequest400, 400)
-	// 	return
-	// }
 
 	file, _, err := r.FormFile("file")
 	if err != nil {
@@ -126,18 +112,17 @@ func (api *Handler) UploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// s := chatIDs + time.Now().Format("2006.01.02 15:04:05")
-
-	// h := sha256.New()
-
-	// h.Write([]byte(s))
-	// attachNum := hex.EncodeToString(h.Sum(nil))
 	attachNum := uuid.New().String()
 
-	fileName := filePath + attachNum + fileExt
+	fileName := filePath + "/" + attachNum + fileExt
+	if err := os.MkdirAll(filePath, os.ModePerm); err != nil {
+		log.Println("error create path: ", err)
+		ReturnErrorJSON(w, e.ErrServerError500, 500)
+		return
+	}
 	f, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
-		log.Println("error create/open file")
+		log.Println("error create/open file: ", err)
 		ReturnErrorJSON(w, e.ErrServerError500, 500)
 		return
 	}
@@ -145,28 +130,12 @@ func (api *Handler) UploadFile(w http.ResponseWriter, r *http.Request) {
 
 	_, err = io.Copy(f, file)
 	if err != nil {
-		log.Println("error copy to new file")
+		log.Println("error copy to new file: ", err)
 		ReturnErrorJSON(w, e.ErrServerError500, 500)
 		return
 	}
 
-	fileAddr := "http://127.0.0.1:8081" + filePath[:1] + attachNum + fileExt
-
-	// mes := &m.MessageWebsocket{Text: text + "\n" + fileAddr, ChatID: int32(chatID)}
-	// log.Println("Sending mes with attach to bot: ", "text:", mes.Text, "chatid:", mes.ChatID)
-
-	// if mes.ChatID == 1 {
-	// 	api.hub.MessagesToTGBot <- mes
-	// } else if mes.ChatID == 2 {
-	// 	api.hub.MessagesToVKBot <- mes
-	// }
-
-	// err = api.store.AddMessage(&m.CreateMessage{Text: mes.Text, ChatID: int(mes.ChatID), IsAuthorTeacher: true, IsRead: false})
-	// if err != nil {
-	// 	log.Println(err)
-	// 	ReturnErrorJSON(w, e.ErrServerError500, 500)
-	// 	return
-	// }
+	fileAddr := filePath[:1] + attachNum + fileExt
 
 	json.NewEncoder(w).Encode(&model.UploadAttachResponse{File: fileAddr})
 }
