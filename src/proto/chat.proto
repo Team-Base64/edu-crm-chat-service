@@ -77,9 +77,21 @@ message CreateChatResponse {
     int32 internalChatID = 1;
 }
 
+message Nothing {}
+
+message BroadcastMessage {
+    int32 classID = 1;
+    string title = 2;
+    string description = 3;
+    repeated string attachmentURLs = 4;
+}
+
 service BotChat {
+    rpc BroadcastMsg(BroadcastMessage) returns (Nothing);
+
     rpc StartChatTG(stream Message) returns (stream Message);
     rpc StartChatVK(stream Message) returns (stream Message);
+    
 
     rpc UploadFile(FileUploadRequest) returns (FileUploadResponse);
     rpc ValidateToken (ValidateTokenRequest) returns (ValidateTokenResponse);

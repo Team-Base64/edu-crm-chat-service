@@ -11,6 +11,7 @@ import (
 
 type StoreInterface interface {
 	AddMessage(in *m.CreateMessage) error
+	GetChatsByClassID(chatID int) (*[]int, error)
 }
 
 type Store struct {
@@ -29,4 +30,23 @@ func (s *Store) AddMessage(in *m.CreateMessage) error {
 		return err
 	}
 	return nil
+}
+
+func (s *Store) GetChatsByClassID(chatID int) (*[]int, error) {
+	rows, err := s.db.Query(`SELECT id FROM chats WHERE classID =  $1;`, chatID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	ans := []int{}
+	for rows.Next() {
+		var id int
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+
+		ans = append(ans, id)
+	}
+	return &ans, nil
 }

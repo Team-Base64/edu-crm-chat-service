@@ -23,6 +23,7 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
+	BotChat_BroadcastMsg_FullMethodName  = "/chat.BotChat/BroadcastMsg"
 	BotChat_StartChatTG_FullMethodName   = "/chat.BotChat/StartChatTG"
 	BotChat_StartChatVK_FullMethodName   = "/chat.BotChat/StartChatVK"
 	BotChat_UploadFile_FullMethodName    = "/chat.BotChat/UploadFile"
@@ -37,6 +38,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type BotChatClient interface {
+	BroadcastMsg(ctx context.Context, in *BroadcastMessage, opts ...grpc.CallOption) (*Nothing, error)
 	StartChatTG(ctx context.Context, opts ...grpc.CallOption) (BotChat_StartChatTGClient, error)
 	StartChatVK(ctx context.Context, opts ...grpc.CallOption) (BotChat_StartChatVKClient, error)
 	UploadFile(ctx context.Context, in *FileUploadRequest, opts ...grpc.CallOption) (*FileUploadResponse, error)
@@ -53,6 +55,15 @@ type botChatClient struct {
 
 func NewBotChatClient(cc grpc.ClientConnInterface) BotChatClient {
 	return &botChatClient{cc}
+}
+
+func (c *botChatClient) BroadcastMsg(ctx context.Context, in *BroadcastMessage, opts ...grpc.CallOption) (*Nothing, error) {
+	out := new(Nothing)
+	err := c.cc.Invoke(ctx, BotChat_BroadcastMsg_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *botChatClient) StartChatTG(ctx context.Context, opts ...grpc.CallOption) (BotChat_StartChatTGClient, error) {
@@ -175,6 +186,7 @@ func (c *botChatClient) SendSolution(ctx context.Context, in *SendSolutionReques
 // All implementations must embed UnimplementedBotChatServer
 // for forward compatibility
 type BotChatServer interface {
+	BroadcastMsg(context.Context, *BroadcastMessage) (*Nothing, error)
 	StartChatTG(BotChat_StartChatTGServer) error
 	StartChatVK(BotChat_StartChatVKServer) error
 	UploadFile(context.Context, *FileUploadRequest) (*FileUploadResponse, error)
@@ -190,6 +202,9 @@ type BotChatServer interface {
 type UnimplementedBotChatServer struct {
 }
 
+func (UnimplementedBotChatServer) BroadcastMsg(context.Context, *BroadcastMessage) (*Nothing, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BroadcastMsg not implemented")
+}
 func (UnimplementedBotChatServer) StartChatTG(BotChat_StartChatTGServer) error {
 	return status.Errorf(codes.Unimplemented, "method StartChatTG not implemented")
 }
@@ -225,6 +240,24 @@ type UnsafeBotChatServer interface {
 
 func RegisterBotChatServer(s grpc.ServiceRegistrar, srv BotChatServer) {
 	s.RegisterService(&BotChat_ServiceDesc, srv)
+}
+
+func _BotChat_BroadcastMsg_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BroadcastMessage)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BotChatServer).BroadcastMsg(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BotChat_BroadcastMsg_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BotChatServer).BroadcastMsg(ctx, req.(*BroadcastMessage))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _BotChat_StartChatTG_Handler(srv interface{}, stream grpc.ServerStream) error {
@@ -394,6 +427,10 @@ var BotChat_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "chat.BotChat",
 	HandlerType: (*BotChatServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "BroadcastMsg",
+			Handler:    _BotChat_BroadcastMsg_Handler,
+		},
 		{
 			MethodName: "UploadFile",
 			Handler:    _BotChat_UploadFile_Handler,

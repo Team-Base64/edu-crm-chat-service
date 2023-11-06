@@ -46,7 +46,7 @@ func (sm *ChatManager) StartChatTG(ch proto.BotChat_StartChatTGServer) error {
 				continue
 			}
 			log.Println("preparing mes to tg bot: ", mes2)
-			resp := proto.Message{Text: mes2.Text, ChatID: mockChatID}
+			resp := proto.Message{Text: mes2.Text, ChatID: mockChatID, AttachmentURLs: mes2.AttachmentURLs}
 			if err := ch.Send(&resp); err != nil {
 				log.Println("1!!!!!!!!! error: ", err)
 				// if err.Error() == "rpc error: code = Canceled desc = context canceled" {
@@ -256,34 +256,16 @@ func (sm *ChatManager) UploadFile(ctx context.Context, req *proto.FileUploadRequ
 	//return stream.SendAndClose(&proto.FileUploadResponse{FileName: "homework_" + homeworkNum + fileExt, Size: uint32(fileSize)})
 }
 
-// type File struct {
-// 	FilePath   string
-// 	buffer     *bytes.Buffer
-// 	OutputFile *os.File
-// }
+func (sm *ChatManager) BroadcastMsg(ctx context.Context, req *proto.BroadcastMessage) (*proto.Nothing, error) {
+	log.Println("called Broadcast Msg from main backend")
+	ids, err := sm.store.GetChatsByClassID(int(req.ClassID))
+	if err != nil {
+		log.Println(err)
+		return &proto.Nothing{}, err
+	}
+	for _, id := range *ids {
+		sm.hub.MessagesToTGBot <- &m.MessageWebsocket{ChatID: int32(id), Text: req.Title + "\n" + req.Description, AttachmentURLs: req.AttachmentURLs}
+	}
 
-// func (f *File) SetFile(fileName, path string) error {
-// 	err := os.MkdirAll(path, os.ModePerm)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	f.FilePath = filepath.Join(path, fileName)
-// 	file, err := os.Create(f.FilePath)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	f.OutputFile = file
-// 	return nil
-// }
-
-// func (f *File) Write(chunk []byte) error {
-// 	if f.OutputFile == nil {
-// 		return nil
-// 	}
-// 	_, err := f.OutputFile.Write(chunk)
-// 	return err
-// }
-
-// func (f *File) Close() error {
-// 	return f.OutputFile.Close()
-// }
+	return &proto.Nothing{}, nil
+}
