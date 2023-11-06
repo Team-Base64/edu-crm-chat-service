@@ -1,21 +1,16 @@
 package chat
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"io"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
-	"strconv"
-	"time"
 
 	e "main/domain/errors"
 	"main/domain/model"
-	m "main/domain/model"
 
-	"crypto/sha256"
+	"github.com/google/uuid"
 )
 
 var mockTeacherID = 1
@@ -52,35 +47,48 @@ func ReturnErrorJSON(w http.ResponseWriter, err error, errCode int) {
 	json.NewEncoder(w).Encode(&model.Error{Error: err.Error()})
 }
 
-// SetAttach godoc
-// @Summary Set teacher's attach
-// @Description sets teacher's attach
-// @ID setAttach
+// UploadAttach godoc
+// @Summary Upload attach
+// @Description Upload attach
+// @ID uploadAttach
 // @Accept  multipart/form-data
 // @Produce  json
-// @Param file formData file true "teacher's attach"
-// @Param text query string false "text"
-// @Param chatid query string true "Chat id"
+// @Param file formData file true "attach"
+// @Param type query string true "type"
 // @Success 200 {object} model.Response "ok"
 // @Failure 401 {object} model.Error "unauthorized - Access token is missing or invalid"
 // @Failure 500 {object} model.Error "internal Server Error - Request is valid but operation failed at server side"
 // @Router /attach [post]
-func (api *Handler) SetAttach(w http.ResponseWriter, r *http.Request) {
-	textS := r.URL.Query().Get("text")
-	chatIDs := r.URL.Query().Get("chatid")
+func (api *Handler) UploadFile(w http.ResponseWriter, r *http.Request) {
+	typeS := r.URL.Query().Get("type")
 
-	text, err := url.QueryUnescape(textS)
-	if err != nil {
-		log.Println("error: ", err)
-		ReturnErrorJSON(w, e.ErrBadRequest400, 400)
-	}
-
-	chatID, err := strconv.Atoi(chatIDs)
-	if err != nil {
-		log.Println("error: ", err)
+	filePath := ""
+	switch typeS {
+	case "homework":
+		filePath = "./filestorage/homeworks/homework_"
+	case "solution":
+		filePath = "./filestorage/solutions/solution_"
+	case "chat":
+		filePath = "./filestorage/chat/attach_"
+	default:
+		log.Println("error wrong type query param")
 		ReturnErrorJSON(w, e.ErrBadRequest400, 400)
 		return
 	}
+	//chatIDs := r.URL.Query().Get("chatid")
+
+	// text, err := url.QueryUnescape(textS)
+	// if err != nil {
+	// 	log.Println("error: ", err)
+	// 	ReturnErrorJSON(w, e.ErrBadRequest400, 400)
+	// }
+
+	// chatID, err := strconv.Atoi(chatIDs)
+	// if err != nil {
+	// 	log.Println("error: ", err)
+	// 	ReturnErrorJSON(w, e.ErrBadRequest400, 400)
+	// 	return
+	// }
 
 	file, _, err := r.FormFile("file")
 	if err != nil {
@@ -118,14 +126,15 @@ func (api *Handler) SetAttach(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s := chatIDs + time.Now().Format("2006.01.02 15:04:05")
+	// s := chatIDs + time.Now().Format("2006.01.02 15:04:05")
 
-	h := sha256.New()
+	// h := sha256.New()
 
-	h.Write([]byte(s))
-	attachNum := hex.EncodeToString(h.Sum(nil))
+	// h.Write([]byte(s))
+	// attachNum := hex.EncodeToString(h.Sum(nil))
+	attachNum := uuid.New().String()
 
-	fileName := "./filestorage/attaches/attach_" + attachNum + fileExt
+	fileName := filePath + attachNum + fileExt
 	f, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		log.Println("error create/open file")
@@ -141,22 +150,23 @@ func (api *Handler) SetAttach(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fileAddr := "http://127.0.0.1:8081/filestorage/attaches/attach_" + attachNum + fileExt
-	mes := &m.MessageWebsocket{Text: text + "\n" + fileAddr, ChatID: int32(chatID)}
-	log.Println("Sending mes with attach to bot: ", "text:", mes.Text, "chatid:", mes.ChatID)
+	fileAddr := "http://127.0.0.1:8081" + filePath[:1] + attachNum + fileExt
 
-	if mes.ChatID == 1 {
-		api.hub.MessagesToTGBot <- mes
-	} else if mes.ChatID == 2 {
-		api.hub.MessagesToVKBot <- mes
-	}
+	// mes := &m.MessageWebsocket{Text: text + "\n" + fileAddr, ChatID: int32(chatID)}
+	// log.Println("Sending mes with attach to bot: ", "text:", mes.Text, "chatid:", mes.ChatID)
 
-	err = api.store.AddMessage(&m.CreateMessage{Text: mes.Text, ChatID: int(mes.ChatID), IsAuthorTeacher: true, IsRead: false})
-	if err != nil {
-		log.Println(err)
-		ReturnErrorJSON(w, e.ErrServerError500, 500)
-		return
-	}
+	// if mes.ChatID == 1 {
+	// 	api.hub.MessagesToTGBot <- mes
+	// } else if mes.ChatID == 2 {
+	// 	api.hub.MessagesToVKBot <- mes
+	// }
 
-	json.NewEncoder(w).Encode(&model.Response{})
+	// err = api.store.AddMessage(&m.CreateMessage{Text: mes.Text, ChatID: int(mes.ChatID), IsAuthorTeacher: true, IsRead: false})
+	// if err != nil {
+	// 	log.Println(err)
+	// 	ReturnErrorJSON(w, e.ErrServerError500, 500)
+	// 	return
+	// }
+
+	json.NewEncoder(w).Encode(&model.UploadAttachResponse{File: fileAddr})
 }

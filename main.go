@@ -60,7 +60,7 @@ func main() {
 
 	//myRouter.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { log.Println("main page") })
 	myRouter.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) { src.ServeWs(hub, w, r) })
-	myRouter.HandleFunc("/api/attach", Handler.SetAttach).Methods(http.MethodPost, http.MethodOptions)
+	myRouter.HandleFunc("/api/attach", Handler.UploadFile).Methods(http.MethodPost, http.MethodOptions)
 	myRouter.PathPrefix("/api/docs").Handler(httpSwagger.WrapHandler)
 	myRouter.Use(loggingAndCORSHeadersMiddleware)
 

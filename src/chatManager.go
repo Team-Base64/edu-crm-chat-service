@@ -1,13 +1,12 @@
 package chat
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
+	"context"
 	"errors"
 	"io"
 	"log"
+	"net/http"
 	"os"
-	"time"
 
 	m "main/domain/model"
 
@@ -15,6 +14,7 @@ import (
 
 	proto "main/src/proto"
 
+	"github.com/google/uuid"
 	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
@@ -48,14 +48,11 @@ func (sm *ChatManager) StartChatTG(ch proto.BotChat_StartChatTGServer) error {
 			log.Println("preparing mes to tg bot: ", mes2)
 			resp := proto.Message{Text: mes2.Text, ChatID: mockChatID}
 			if err := ch.Send(&resp); err != nil {
-				log.Println("!!!!!!!!!")
-				log.Println(err)
-				if err.Error() == "rpc error: code = Canceled desc = context canceled" {
-					log.Println("breaking grpc stream")
-
-					//break
-					//return nil
-				}
+				log.Println("1!!!!!!!!! error: ", err)
+				// if err.Error() == "rpc error: code = Canceled desc = context canceled" {
+				// 	log.Println("breaking grpc stream")
+				// }
+				log.Println("breaking grpc stream")
 				errSending = err
 				break
 				//continue
@@ -83,8 +80,7 @@ func (sm *ChatManager) StartChatTG(ch proto.BotChat_StartChatTGServer) error {
 			return err
 		}
 		if err != nil {
-			log.Println("2!!!!!!!!!")
-			log.Println(err)
+			log.Println("2!!!!!!!!! error: ", err)
 			if err.Error() == "rpc error: code = Canceled desc = context canceled" {
 				log.Println("breaking grpc stream")
 				return err
@@ -158,27 +154,29 @@ func (sm *ChatManager) StartChatTG(ch proto.BotChat_StartChatTGServer) error {
 // 	}
 // }
 
-func (sm *ChatManager) UploadAttachesTG(stream proto.BotChat_UploadAttachesTGServer) error {
-	log.Println("called UploadAttachesTG")
+func (sm *ChatManager) UploadFile(ctx context.Context, req *proto.FileUploadRequest) (*proto.FileUploadResponse, error) {
+	log.Println("called UploadFile")
 	//file := NewFile()
 	//var fileSize uint32
-	fileSize := 0
+	//fileSize := 0
 	//url := "https://api.telegram.org/file/bot1290980811:AAEgopVWqb7o0I72cwdIGGZRsRyE0GGNkLA/photos/file_2285.jpg"
 
-	req, err := stream.Recv()
-	if err == io.EOF {
-		log.Println("exit upload stream")
-		return err
-	}
-	if err != nil {
-		log.Println(err)
-		return err
-	}
+	// req, err := stream.Recv()
+	// if err == io.EOF {
+	// 	log.Println("exit upload stream")
+	// 	return err
+	// }
+	// if err != nil {
+	// 	log.Println(err)
+	// 	return err
+	// }
 
-	s := string(req.ChatID) + time.Now().Format("2006.01.02 15:04:05")
-	h := sha256.New()
-	h.Write([]byte(s))
-	homeworkNum := hex.EncodeToString(h.Sum(nil))
+	// s := string(req.ChatID) + time.Now().Format("2006.01.02 15:04:05")
+	// h := sha256.New()
+	// h.Write([]byte(s))
+	// homeworkNum := hex.EncodeToString(h.Sum(nil))
+
+	homeworkNum := uuid.New().String()
 
 	fileExt := ""
 	switch req.Mimetype {
@@ -191,60 +189,71 @@ func (sm *ChatManager) UploadAttachesTG(stream proto.BotChat_UploadAttachesTGSer
 	case "application/pdf":
 		fileExt = ".pdf"
 	default:
-		err := errors.New("error: not allowed file extension")
+		err := errors.New("error: " + fileExt + " is not allowed file extension")
 		log.Println(err)
-		return err
+		return &proto.FileUploadResponse{InternalFileURL: ""}, err
 	}
 
 	fileName := "./filestorage/homeworks/homework_" + homeworkNum + fileExt
 	f, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		log.Println("error create/open file")
-		return err
+		return &proto.FileUploadResponse{InternalFileURL: ""}, err
 	}
 	defer f.Close()
 
-	_, err = f.Write(req.GetChunk())
+	//resp, err := http.Get("https://api.telegram.org/file/bot1290980811:AAEgopVWqb7o0I72cwdIGGZRsRyE0GGNkLA/photos/file_2285.jpg")
+	log.Println(req.FileURL)
+	resp, err := http.Get(req.FileURL)
 	if err != nil {
 		log.Println(err)
-		return err
+		return &proto.FileUploadResponse{InternalFileURL: ""}, err
 	}
-	fileSize += len(req.GetChunk())
+	defer resp.Body.Close()
 
-	for {
-		req, err := stream.Recv()
-		if err == io.EOF {
-			log.Println("error: end of file")
-			break
-		}
-		if err != nil {
-			log.Println(err)
-			return err
-		}
-		chunk := req.GetChunk()
-		if _, err := f.Write(chunk); err != nil {
-			log.Println(err)
-			return err
-		}
-		fileSize += len(chunk)
-	}
-	log.Println("saved file:", fileName, "size: ", fileSize)
+	n, err := io.Copy(f, resp.Body)
+
+	// _, err = f.Write(req.GetChunk())
+	// if err != nil {
+	// 	log.Println(err)
+	// 	return err
+	// }
+	// fileSize += len(req.GetChunk())
+
+	// for {
+	// 	req, err := stream.Recv()
+	// 	if err == io.EOF {
+	// 		log.Println("error: end of file")
+	// 		break
+	// 	}
+	// 	if err != nil {
+	// 		log.Println(err)
+	// 		return err
+	// 	}
+	// 	chunk := req.GetChunk()
+	// 	if _, err := f.Write(chunk); err != nil {
+	// 		log.Println(err)
+	// 		return err
+	// 	}
+	// 	fileSize += len(chunk)
+	// }
+	log.Println("saved file:", fileName, "size: ", n)
 
 	fileAddr := "http://127.0.0.1:8081/filestorage/homeworks/homework_" + homeworkNum + fileExt
-	mes := m.MessageWebsocket{Text: req.Text + "\n" + fileAddr, ChatID: 1, Channel: "chat"}
-	if sm.hub.chats[mes.ChatID] != nil {
-		log.Println("routing mes with attach from tg bot to hub: ", req)
-		sm.hub.Broadcast <- &mes
-		log.Println("routing mes with attach from tg bot to hub + added to broadcast: ", req)
-		err = sm.store.AddMessage(&m.CreateMessage{Text: mes.Text, ChatID: int(mes.ChatID), IsAuthorTeacher: false, IsRead: false})
-		if err != nil {
-			log.Println(err)
-			return err
-		}
-		log.Println("routing mes with attach from tg bot to hub + added to db: ", req)
-	}
-
-	return stream.SendAndClose(&proto.FileUploadResponse{FileName: "homework_" + homeworkNum + fileExt, Size: uint32(fileSize)})
+	// mes := m.MessageWebsocket{Text: req.Text + "\n" + fileAddr, ChatID: 1, Channel: "chat"}
+	// if sm.hub.chats[mes.ChatID] != nil {
+	// 	log.Println("routing mes with attach from tg bot to hub: ", req)
+	// 	sm.hub.Broadcast <- &mes
+	// 	log.Println("routing mes with attach from tg bot to hub + added to broadcast: ", req)
+	// 	err = sm.store.AddMessage(&m.CreateMessage{Text: mes.Text, ChatID: int(mes.ChatID), IsAuthorTeacher: false, IsRead: false})
+	// 	if err != nil {
+	// 		log.Println(err)
+	// 		return &proto.Status{IsSuccessful: false}, err
+	// 	}
+	// 	log.Println("routing mes with attach from tg bot to hub + added to db: ", req)
+	// }
+	return &proto.FileUploadResponse{InternalFileURL: fileAddr}, nil
+	//return stream.SendAndClose(&proto.FileUploadResponse{FileName: "homework_" + homeworkNum + fileExt, Size: uint32(fileSize)})
 }
 
 // type File struct {

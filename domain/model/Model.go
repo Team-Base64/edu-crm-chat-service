@@ -8,6 +8,10 @@ type Response struct {
 	Body interface{} `json:"body,omitempty"`
 }
 
+type UploadAttachResponse struct {
+	File string `json:"file,omitempty"`
+}
+
 type CreateMessage struct {
 	ChatID          int    `json:"chatid,omitempty"`
 	Text            string `json:"text"`

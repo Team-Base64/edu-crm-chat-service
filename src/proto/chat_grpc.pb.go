@@ -23,9 +23,14 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	BotChat_StartChatTG_FullMethodName      = "/chat.BotChat/StartChatTG"
-	BotChat_StartChatVK_FullMethodName      = "/chat.BotChat/StartChatVK"
-	BotChat_UploadAttachesTG_FullMethodName = "/chat.BotChat/UploadAttachesTG"
+	BotChat_StartChatTG_FullMethodName   = "/chat.BotChat/StartChatTG"
+	BotChat_StartChatVK_FullMethodName   = "/chat.BotChat/StartChatVK"
+	BotChat_UploadFile_FullMethodName    = "/chat.BotChat/UploadFile"
+	BotChat_ValidateToken_FullMethodName = "/chat.BotChat/ValidateToken"
+	BotChat_CreateChat_FullMethodName    = "/chat.BotChat/CreateChat"
+	BotChat_GetHomeworks_FullMethodName  = "/chat.BotChat/GetHomeworks"
+	BotChat_CreateStudent_FullMethodName = "/chat.BotChat/CreateStudent"
+	BotChat_SendSolution_FullMethodName  = "/chat.BotChat/SendSolution"
 )
 
 // BotChatClient is the client API for BotChat service.
@@ -34,7 +39,12 @@ const (
 type BotChatClient interface {
 	StartChatTG(ctx context.Context, opts ...grpc.CallOption) (BotChat_StartChatTGClient, error)
 	StartChatVK(ctx context.Context, opts ...grpc.CallOption) (BotChat_StartChatVKClient, error)
-	UploadAttachesTG(ctx context.Context, opts ...grpc.CallOption) (BotChat_UploadAttachesTGClient, error)
+	UploadFile(ctx context.Context, in *FileUploadRequest, opts ...grpc.CallOption) (*FileUploadResponse, error)
+	ValidateToken(ctx context.Context, in *ValidateTokenRequest, opts ...grpc.CallOption) (*ValidateTokenResponse, error)
+	CreateChat(ctx context.Context, in *CreateChatRequest, opts ...grpc.CallOption) (*CreateChatResponse, error)
+	GetHomeworks(ctx context.Context, in *GetHomeworksRequest, opts ...grpc.CallOption) (*GetHomeworksResponse, error)
+	CreateStudent(ctx context.Context, in *CreateStudentRequest, opts ...grpc.CallOption) (*CreateStudentResponse, error)
+	SendSolution(ctx context.Context, in *SendSolutionRequest, opts ...grpc.CallOption) (*SendSolutionResponse, error)
 }
 
 type botChatClient struct {
@@ -107,38 +117,58 @@ func (x *botChatStartChatVKClient) Recv() (*Message, error) {
 	return m, nil
 }
 
-func (c *botChatClient) UploadAttachesTG(ctx context.Context, opts ...grpc.CallOption) (BotChat_UploadAttachesTGClient, error) {
-	stream, err := c.cc.NewStream(ctx, &BotChat_ServiceDesc.Streams[2], BotChat_UploadAttachesTG_FullMethodName, opts...)
+func (c *botChatClient) UploadFile(ctx context.Context, in *FileUploadRequest, opts ...grpc.CallOption) (*FileUploadResponse, error) {
+	out := new(FileUploadResponse)
+	err := c.cc.Invoke(ctx, BotChat_UploadFile_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &botChatUploadAttachesTGClient{stream}
-	return x, nil
+	return out, nil
 }
 
-type BotChat_UploadAttachesTGClient interface {
-	Send(*FileUploadRequest) error
-	CloseAndRecv() (*FileUploadResponse, error)
-	grpc.ClientStream
-}
-
-type botChatUploadAttachesTGClient struct {
-	grpc.ClientStream
-}
-
-func (x *botChatUploadAttachesTGClient) Send(m *FileUploadRequest) error {
-	return x.ClientStream.SendMsg(m)
-}
-
-func (x *botChatUploadAttachesTGClient) CloseAndRecv() (*FileUploadResponse, error) {
-	if err := x.ClientStream.CloseSend(); err != nil {
+func (c *botChatClient) ValidateToken(ctx context.Context, in *ValidateTokenRequest, opts ...grpc.CallOption) (*ValidateTokenResponse, error) {
+	out := new(ValidateTokenResponse)
+	err := c.cc.Invoke(ctx, BotChat_ValidateToken_FullMethodName, in, out, opts...)
+	if err != nil {
 		return nil, err
 	}
-	m := new(FileUploadResponse)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
+	return out, nil
+}
+
+func (c *botChatClient) CreateChat(ctx context.Context, in *CreateChatRequest, opts ...grpc.CallOption) (*CreateChatResponse, error) {
+	out := new(CreateChatResponse)
+	err := c.cc.Invoke(ctx, BotChat_CreateChat_FullMethodName, in, out, opts...)
+	if err != nil {
 		return nil, err
 	}
-	return m, nil
+	return out, nil
+}
+
+func (c *botChatClient) GetHomeworks(ctx context.Context, in *GetHomeworksRequest, opts ...grpc.CallOption) (*GetHomeworksResponse, error) {
+	out := new(GetHomeworksResponse)
+	err := c.cc.Invoke(ctx, BotChat_GetHomeworks_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *botChatClient) CreateStudent(ctx context.Context, in *CreateStudentRequest, opts ...grpc.CallOption) (*CreateStudentResponse, error) {
+	out := new(CreateStudentResponse)
+	err := c.cc.Invoke(ctx, BotChat_CreateStudent_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *botChatClient) SendSolution(ctx context.Context, in *SendSolutionRequest, opts ...grpc.CallOption) (*SendSolutionResponse, error) {
+	out := new(SendSolutionResponse)
+	err := c.cc.Invoke(ctx, BotChat_SendSolution_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 // BotChatServer is the server API for BotChat service.
@@ -147,7 +177,12 @@ func (x *botChatUploadAttachesTGClient) CloseAndRecv() (*FileUploadResponse, err
 type BotChatServer interface {
 	StartChatTG(BotChat_StartChatTGServer) error
 	StartChatVK(BotChat_StartChatVKServer) error
-	UploadAttachesTG(BotChat_UploadAttachesTGServer) error
+	UploadFile(context.Context, *FileUploadRequest) (*FileUploadResponse, error)
+	ValidateToken(context.Context, *ValidateTokenRequest) (*ValidateTokenResponse, error)
+	CreateChat(context.Context, *CreateChatRequest) (*CreateChatResponse, error)
+	GetHomeworks(context.Context, *GetHomeworksRequest) (*GetHomeworksResponse, error)
+	CreateStudent(context.Context, *CreateStudentRequest) (*CreateStudentResponse, error)
+	SendSolution(context.Context, *SendSolutionRequest) (*SendSolutionResponse, error)
 	mustEmbedUnimplementedBotChatServer()
 }
 
@@ -161,8 +196,23 @@ func (UnimplementedBotChatServer) StartChatTG(BotChat_StartChatTGServer) error {
 func (UnimplementedBotChatServer) StartChatVK(BotChat_StartChatVKServer) error {
 	return status.Errorf(codes.Unimplemented, "method StartChatVK not implemented")
 }
-func (UnimplementedBotChatServer) UploadAttachesTG(BotChat_UploadAttachesTGServer) error {
-	return status.Errorf(codes.Unimplemented, "method UploadAttachesTG not implemented")
+func (UnimplementedBotChatServer) UploadFile(context.Context, *FileUploadRequest) (*FileUploadResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UploadFile not implemented")
+}
+func (UnimplementedBotChatServer) ValidateToken(context.Context, *ValidateTokenRequest) (*ValidateTokenResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ValidateToken not implemented")
+}
+func (UnimplementedBotChatServer) CreateChat(context.Context, *CreateChatRequest) (*CreateChatResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateChat not implemented")
+}
+func (UnimplementedBotChatServer) GetHomeworks(context.Context, *GetHomeworksRequest) (*GetHomeworksResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetHomeworks not implemented")
+}
+func (UnimplementedBotChatServer) CreateStudent(context.Context, *CreateStudentRequest) (*CreateStudentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateStudent not implemented")
+}
+func (UnimplementedBotChatServer) SendSolution(context.Context, *SendSolutionRequest) (*SendSolutionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendSolution not implemented")
 }
 func (UnimplementedBotChatServer) mustEmbedUnimplementedBotChatServer() {}
 
@@ -229,30 +279,112 @@ func (x *botChatStartChatVKServer) Recv() (*Message, error) {
 	return m, nil
 }
 
-func _BotChat_UploadAttachesTG_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(BotChatServer).UploadAttachesTG(&botChatUploadAttachesTGServer{stream})
-}
-
-type BotChat_UploadAttachesTGServer interface {
-	SendAndClose(*FileUploadResponse) error
-	Recv() (*FileUploadRequest, error)
-	grpc.ServerStream
-}
-
-type botChatUploadAttachesTGServer struct {
-	grpc.ServerStream
-}
-
-func (x *botChatUploadAttachesTGServer) SendAndClose(m *FileUploadResponse) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func (x *botChatUploadAttachesTGServer) Recv() (*FileUploadRequest, error) {
-	m := new(FileUploadRequest)
-	if err := x.ServerStream.RecvMsg(m); err != nil {
+func _BotChat_UploadFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FileUploadRequest)
+	if err := dec(in); err != nil {
 		return nil, err
 	}
-	return m, nil
+	if interceptor == nil {
+		return srv.(BotChatServer).UploadFile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BotChat_UploadFile_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BotChatServer).UploadFile(ctx, req.(*FileUploadRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BotChat_ValidateToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidateTokenRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BotChatServer).ValidateToken(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BotChat_ValidateToken_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BotChatServer).ValidateToken(ctx, req.(*ValidateTokenRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BotChat_CreateChat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateChatRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BotChatServer).CreateChat(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BotChat_CreateChat_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BotChatServer).CreateChat(ctx, req.(*CreateChatRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BotChat_GetHomeworks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetHomeworksRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BotChatServer).GetHomeworks(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BotChat_GetHomeworks_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BotChatServer).GetHomeworks(ctx, req.(*GetHomeworksRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BotChat_CreateStudent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateStudentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BotChatServer).CreateStudent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BotChat_CreateStudent_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BotChatServer).CreateStudent(ctx, req.(*CreateStudentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BotChat_SendSolution_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SendSolutionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BotChatServer).SendSolution(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BotChat_SendSolution_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BotChatServer).SendSolution(ctx, req.(*SendSolutionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 // BotChat_ServiceDesc is the grpc.ServiceDesc for BotChat service.
@@ -261,7 +393,32 @@ func (x *botChatUploadAttachesTGServer) Recv() (*FileUploadRequest, error) {
 var BotChat_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "chat.BotChat",
 	HandlerType: (*BotChatServer)(nil),
-	Methods:     []grpc.MethodDesc{},
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "UploadFile",
+			Handler:    _BotChat_UploadFile_Handler,
+		},
+		{
+			MethodName: "ValidateToken",
+			Handler:    _BotChat_ValidateToken_Handler,
+		},
+		{
+			MethodName: "CreateChat",
+			Handler:    _BotChat_CreateChat_Handler,
+		},
+		{
+			MethodName: "GetHomeworks",
+			Handler:    _BotChat_GetHomeworks_Handler,
+		},
+		{
+			MethodName: "CreateStudent",
+			Handler:    _BotChat_CreateStudent_Handler,
+		},
+		{
+			MethodName: "SendSolution",
+			Handler:    _BotChat_SendSolution_Handler,
+		},
+	},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "StartChatTG",
@@ -273,11 +430,6 @@ var BotChat_ServiceDesc = grpc.ServiceDesc{
 			StreamName:    "StartChatVK",
 			Handler:       _BotChat_StartChatVK_Handler,
 			ServerStreams: true,
-			ClientStreams: true,
-		},
-		{
-			StreamName:    "UploadAttachesTG",
-			Handler:       _BotChat_UploadAttachesTG_Handler,
 			ClientStreams: true,
 		},
 	},
