@@ -137,7 +137,7 @@ func (api *Handler) UploadFile(w http.ResponseWriter, r *http.Request) {
 	fileName := filePath + attachNum + fileExt
 	f, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
-		log.Println("error create/open file")
+		log.Println("error create/open file: ", err)
 		ReturnErrorJSON(w, e.ErrServerError500, 500)
 		return
 	}
@@ -145,7 +145,7 @@ func (api *Handler) UploadFile(w http.ResponseWriter, r *http.Request) {
 
 	_, err = io.Copy(f, file)
 	if err != nil {
-		log.Println("error copy to new file")
+		log.Println("error copy to new file: ", err)
 		ReturnErrorJSON(w, e.ErrServerError500, 500)
 		return
 	}

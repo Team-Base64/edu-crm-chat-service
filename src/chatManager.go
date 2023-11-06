@@ -175,7 +175,7 @@ func (sm *ChatManager) UploadFile(ctx context.Context, req *proto.FileUploadRequ
 		return &proto.FileUploadResponse{InternalFileURL: ""}, err
 	}
 
-	fileName := "./filestorage/homeworks/homework_" + homeworkNum + fileExt
+	fileName := "./filestorage/chat/attach_" + homeworkNum + fileExt
 	f, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		log.Println("error create/open file")
@@ -196,7 +196,7 @@ func (sm *ChatManager) UploadFile(ctx context.Context, req *proto.FileUploadRequ
 	n, err := io.Copy(f, resp.Body)
 	log.Println("saved file:", fileName, "size: ", n)
 
-	fileAddr := "http://127.0.0.1:8081/filestorage/solutions/solutions_" + homeworkNum + fileExt
+	fileAddr := "http://127.0.0.1:8081/filestorage/chat/attach_" + homeworkNum + fileExt
 	// mes := m.MessageWebsocket{Text: req.Text + "\n" + fileAddr, ChatID: 1, Channel: "chat"}
 	// if sm.hub.chats[mes.ChatID] != nil {
 	// 	log.Println("routing mes with attach from tg bot to hub: ", req)
@@ -219,6 +219,7 @@ func (sm *ChatManager) BroadcastMsg(ctx context.Context, req *proto.BroadcastMes
 		log.Println(err)
 		return &proto.Nothing{}, err
 	}
+	// ИСПРАВИТЬ!!!
 	for _, id := range *ids {
 		sm.hub.MessagesToTGBot <- &m.MessageWebsocket{ChatID: int32(id), Text: req.Title + "\n" + req.Description, AttachmentURLs: req.AttachmentURLs}
 		sm.hub.MessagesToVKBot <- &m.MessageWebsocket{ChatID: int32(id), Text: req.Title + "\n" + req.Description, AttachmentURLs: req.AttachmentURLs}
