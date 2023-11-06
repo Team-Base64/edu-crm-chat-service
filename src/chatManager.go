@@ -156,25 +156,6 @@ func (sm *ChatManager) StartChatTG(ch proto.BotChat_StartChatTGServer) error {
 
 func (sm *ChatManager) UploadFile(ctx context.Context, req *proto.FileUploadRequest) (*proto.FileUploadResponse, error) {
 	log.Println("called UploadFile")
-	//file := NewFile()
-	//var fileSize uint32
-	//fileSize := 0
-	//url := "https://api.telegram.org/file/bot1290980811:AAEgopVWqb7o0I72cwdIGGZRsRyE0GGNkLA/photos/file_2285.jpg"
-
-	// req, err := stream.Recv()
-	// if err == io.EOF {
-	// 	log.Println("exit upload stream")
-	// 	return err
-	// }
-	// if err != nil {
-	// 	log.Println(err)
-	// 	return err
-	// }
-
-	// s := string(req.ChatID) + time.Now().Format("2006.01.02 15:04:05")
-	// h := sha256.New()
-	// h.Write([]byte(s))
-	// homeworkNum := hex.EncodeToString(h.Sum(nil))
 
 	homeworkNum := uuid.New().String()
 
@@ -203,6 +184,7 @@ func (sm *ChatManager) UploadFile(ctx context.Context, req *proto.FileUploadRequ
 	defer f.Close()
 
 	//resp, err := http.Get("https://api.telegram.org/file/bot1290980811:AAEgopVWqb7o0I72cwdIGGZRsRyE0GGNkLA/photos/file_2285.jpg")
+	//resp, err := http.Get("https://vk.com/doc211427710_672529050?hash=mh0QoNOXWeSDKQqSdLmQcvzYGYlZX0BtMSHIE1L9hwg&dl=KGB2X4QArOzAZEZWxZuYjwrx9RbVVrf2FkTMZ8hHklH&api=1&no_preview=1")
 	log.Println(req.FileURL)
 	resp, err := http.Get(req.FileURL)
 	if err != nil {
@@ -212,34 +194,9 @@ func (sm *ChatManager) UploadFile(ctx context.Context, req *proto.FileUploadRequ
 	defer resp.Body.Close()
 
 	n, err := io.Copy(f, resp.Body)
-
-	// _, err = f.Write(req.GetChunk())
-	// if err != nil {
-	// 	log.Println(err)
-	// 	return err
-	// }
-	// fileSize += len(req.GetChunk())
-
-	// for {
-	// 	req, err := stream.Recv()
-	// 	if err == io.EOF {
-	// 		log.Println("error: end of file")
-	// 		break
-	// 	}
-	// 	if err != nil {
-	// 		log.Println(err)
-	// 		return err
-	// 	}
-	// 	chunk := req.GetChunk()
-	// 	if _, err := f.Write(chunk); err != nil {
-	// 		log.Println(err)
-	// 		return err
-	// 	}
-	// 	fileSize += len(chunk)
-	// }
 	log.Println("saved file:", fileName, "size: ", n)
 
-	fileAddr := "http://127.0.0.1:8081/filestorage/homeworks/homework_" + homeworkNum + fileExt
+	fileAddr := "http://127.0.0.1:8081/filestorage/solutions/solutions_" + homeworkNum + fileExt
 	// mes := m.MessageWebsocket{Text: req.Text + "\n" + fileAddr, ChatID: 1, Channel: "chat"}
 	// if sm.hub.chats[mes.ChatID] != nil {
 	// 	log.Println("routing mes with attach from tg bot to hub: ", req)
@@ -253,7 +210,6 @@ func (sm *ChatManager) UploadFile(ctx context.Context, req *proto.FileUploadRequ
 	// 	log.Println("routing mes with attach from tg bot to hub + added to db: ", req)
 	// }
 	return &proto.FileUploadResponse{InternalFileURL: fileAddr}, nil
-	//return stream.SendAndClose(&proto.FileUploadResponse{FileName: "homework_" + homeworkNum + fileExt, Size: uint32(fileSize)})
 }
 
 func (sm *ChatManager) BroadcastMsg(ctx context.Context, req *proto.BroadcastMessage) (*proto.Nothing, error) {
@@ -265,7 +221,58 @@ func (sm *ChatManager) BroadcastMsg(ctx context.Context, req *proto.BroadcastMes
 	}
 	for _, id := range *ids {
 		sm.hub.MessagesToTGBot <- &m.MessageWebsocket{ChatID: int32(id), Text: req.Title + "\n" + req.Description, AttachmentURLs: req.AttachmentURLs}
+		sm.hub.MessagesToVKBot <- &m.MessageWebsocket{ChatID: int32(id), Text: req.Title + "\n" + req.Description, AttachmentURLs: req.AttachmentURLs}
 	}
 
 	return &proto.Nothing{}, nil
+}
+
+func (sm *ChatManager) ValidateToken(ctx context.Context, req *proto.ValidateTokenRequest) (*proto.ValidateTokenResponse, error) {
+	log.Println("called ValidateToken " + req.Token)
+	id, err := sm.store.ValidateToken(req.Token)
+	if err != nil {
+		log.Println(err)
+		return &proto.ValidateTokenResponse{ClassID: -1}, err
+	}
+	return &proto.ValidateTokenResponse{ClassID: int32(id)}, nil
+}
+
+func (sm *ChatManager) CreateStudent(ctx context.Context, req *proto.CreateStudentRequest) (*proto.CreateStudentResponse, error) {
+	log.Println("called CreateStudent " + req.Name)
+	id, err := sm.store.CreateStudent(req)
+	if err != nil {
+		log.Println(err)
+		return &proto.CreateStudentResponse{StudentID: -1}, err
+	}
+	return &proto.CreateStudentResponse{StudentID: int32(id)}, nil
+}
+
+func (sm *ChatManager) CreateChat(ctx context.Context, req *proto.CreateChatRequest) (*proto.CreateChatResponse, error) {
+	log.Println("called CreateChat ")
+	id, err := sm.store.CreateChat(req)
+	if err != nil {
+		log.Println(err)
+		return &proto.CreateChatResponse{InternalChatID: -1}, err
+	}
+	return &proto.CreateChatResponse{InternalChatID: int32(id)}, nil
+}
+
+func (sm *ChatManager) GetHomeworks(ctx context.Context, req *proto.GetHomeworksRequest) (*proto.GetHomeworksResponse, error) {
+	log.Println("called GetHomeworks ")
+	hws, err := sm.store.GetHomeworksByChatID(int(req.ClassID))
+	if err != nil {
+		log.Println(err)
+		return &proto.GetHomeworksResponse{Homeworks: nil}, err
+	}
+	return &proto.GetHomeworksResponse{Homeworks: hws}, nil
+}
+
+func (sm *ChatManager) SendSolution(ctx context.Context, req *proto.SendSolutionRequest) (*proto.SendSolutionResponse, error) {
+	log.Println("called GetHomeworks ")
+	err := sm.store.CreateSolution(req)
+	if err != nil {
+		log.Println(err)
+		return &proto.SendSolutionResponse{}, err
+	}
+	return &proto.SendSolutionResponse{}, nil
 }

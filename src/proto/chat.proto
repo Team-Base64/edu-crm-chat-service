@@ -45,6 +45,7 @@ message SolutionData {
 message SendSolutionRequest {
     int32 homeworkID = 1;
     SolutionData solution = 2;
+    int32 studentID = 3;
 }
 
 message SendSolutionResponse { }
