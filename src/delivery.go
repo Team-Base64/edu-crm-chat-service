@@ -14,6 +14,10 @@ import (
 	"github.com/google/uuid"
 )
 
+var chatFilesPath = "/chat"
+var homeworkFilesPath = "/homework"
+var solutionFilesPath = "/solution"
+
 // @title TCRA API
 // @version 1.0
 // @description EDUCRM back chat server.
@@ -37,6 +41,12 @@ type Handler struct {
 }
 
 func NewHandler(store StoreInterface, hub *Hub, fs string, pf string) *Handler {
+	for _, path := range []string{chatFilesPath, homeworkFilesPath, solutionFilesPath} {
+		if err := os.MkdirAll(fs+path, os.ModePerm); err != nil {
+			log.Fatalln(e.StacktraceError(err))
+		}
+	}
+
 	return &Handler{
 		store:       store,
 		hub:         hub,
@@ -69,11 +79,11 @@ func (api *Handler) UploadFile(w http.ResponseWriter, r *http.Request) {
 	filePath := ""
 	switch typeS {
 	case "homework":
-		filePath = api.filestorage + "/homeworks"
+		filePath = api.filestorage + chatFilesPath
 	case "solution":
-		filePath = api.filestorage + "/solutions"
+		filePath = api.filestorage + solutionFilesPath
 	case "chat":
-		filePath = api.filestorage + "/chat"
+		filePath = api.filestorage + chatFilesPath
 	default:
 		log.Println(e.StacktraceError(errors.New("error wrong type query param")))
 		ReturnErrorJSON(w, e.ErrBadRequest400)
@@ -121,11 +131,6 @@ func (api *Handler) UploadFile(w http.ResponseWriter, r *http.Request) {
 	attachNum := uuid.New().String()
 
 	fileName := filePath + "/" + attachNum + fileExt
-	if err := os.MkdirAll(filePath, os.ModePerm); err != nil {
-		log.Println(e.StacktraceError(err))
-		ReturnErrorJSON(w, e.ErrServerError500)
-		return
-	}
 	f, err := os.OpenFile(api.prefix+fileName, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		log.Println(e.StacktraceError(err))

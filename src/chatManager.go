@@ -15,7 +15,6 @@ import (
 	proto "main/src/proto"
 
 	"github.com/google/uuid"
-	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
 type ChatManager struct {
