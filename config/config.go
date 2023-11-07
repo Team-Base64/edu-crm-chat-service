@@ -3,6 +3,7 @@ package BaseConfig
 var UrlDB = "URL_DB"
 
 var BaseFilestorage = "BASE_FILESTORAGE"
+var PrefixFilestorage = "PREFIX_FILESTORAGE"
 
 var PortWS = ":8081"
 var PortGRPC = ":8082"

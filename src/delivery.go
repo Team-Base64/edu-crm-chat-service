@@ -33,13 +33,15 @@ type Handler struct {
 	store       StoreInterface
 	hub         *Hub
 	filestorage string
+	prefix      string
 }
 
-func NewHandler(store StoreInterface, hub *Hub, fs string) *Handler {
+func NewHandler(store StoreInterface, hub *Hub, fs string, pf string) *Handler {
 	return &Handler{
 		store:       store,
 		hub:         hub,
 		filestorage: fs,
+		prefix:      pf,
 	}
 }
 
@@ -124,7 +126,7 @@ func (api *Handler) UploadFile(w http.ResponseWriter, r *http.Request) {
 		ReturnErrorJSON(w, e.ErrServerError500)
 		return
 	}
-	f, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE, 0666)
+	f, err := os.OpenFile(api.prefix+fileName, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		log.Println(e.StacktraceError(err))
 		ReturnErrorJSON(w, e.ErrServerError500)

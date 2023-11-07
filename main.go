@@ -52,7 +52,12 @@ func main() {
 	go hub.Run()
 
 	Store := src.NewStore(db)
-	Handler := src.NewHandler(Store, hub, os.Getenv(conf.BaseFilestorage))
+	Handler := src.NewHandler(
+		Store,
+		hub,
+		os.Getenv(conf.BaseFilestorage),
+		os.Getenv(conf.PrefixFilestorage),
+	)
 
 	myRouter.HandleFunc(conf.PathWS, func(w http.ResponseWriter, r *http.Request) { src.ServeWs(hub, w, r) })
 	myRouter.HandleFunc(conf.PathAttach, Handler.UploadFile).Methods(http.MethodPost, http.MethodOptions)
