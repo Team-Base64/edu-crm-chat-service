@@ -4,7 +4,7 @@ on: push
 
 env:
   IMAGE: "ghcr.io/team-base64/edu-crm-chat-service-app"
-  CONTAINER: "chat-service"
+  CONTAINER: "chat"
 
 permissions:
   contents: read
