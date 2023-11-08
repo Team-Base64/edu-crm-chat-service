@@ -1,19 +1,22 @@
 package chat
 
 import (
-	"context"
 	"time"
 
 	e "main/domain/errors"
 	m "main/domain/model"
 	proto "main/src/proto"
 
-	"github.com/jackc/pgx/v5"
+	"database/sql"
+
+	_ "github.com/jackc/pgx/v4/stdlib"
+	"github.com/lib/pq"
 )
 
 type StoreInterface interface {
 	AddMessage(in *m.CreateMessage) error
 	GetChatsByClassID(chatID int) (*[]int, error)
+	GetTypeByChatID(chatID int) (string, error)
 	ValidateToken(tok string) (int, error)
 	CreateStudent(in *proto.CreateStudentRequest) (int, error)
 	CreateChat(in *proto.CreateChatRequest) (int, error)
@@ -22,21 +25,22 @@ type StoreInterface interface {
 }
 
 type Store struct {
-	db *pgx.Conn
+	db *sql.DB
 }
 
-func NewStore(db *pgx.Conn) StoreInterface {
+func NewStore(db *sql.DB) StoreInterface {
 	return &Store{
 		db: db,
 	}
 }
 
 func (s *Store) AddMessage(in *m.CreateMessage) error {
-	_, err := s.db.Exec(
-		context.Background(),
-		`INSERT INTO messages (chatID, text, isAuthorTeacher, time, isRead) VALUES ($1, $2, $3, $4, $5);`,
-		in.ChatID, in.Text, in.IsAuthorTeacher, time.Now().Format("2006.01.02 15:04:05"), in.IsRead,
-	)
+	modelAtt := []string{}
+	if in.AttachmentURLs != nil {
+		modelAtt = in.AttachmentURLs
+	}
+	_, err := s.db.Exec(`INSERT INTO messages (chatID, text, isAuthorTeacher, createtime, isRead, attaches) VALUES ($1, $2, $3, $4, $5, $6);`,
+		in.ChatID, in.Text, in.IsAuthorTeacher, time.Now().Format("2006.01.02 15:04:05"), in.IsRead, (*pq.StringArray)(&modelAtt))
 	if err != nil {
 		return e.StacktraceError(err)
 	}
@@ -45,7 +49,6 @@ func (s *Store) AddMessage(in *m.CreateMessage) error {
 
 func (s *Store) GetChatsByClassID(chatID int) (*[]int, error) {
 	rows, err := s.db.Query(
-		context.Background(),
 		`SELECT id FROM chats WHERE classID =  $1;`,
 		chatID,
 	)
@@ -66,10 +69,25 @@ func (s *Store) GetChatsByClassID(chatID int) (*[]int, error) {
 	return &ans, nil
 }
 
+func (s *Store) GetTypeByChatID(chatID int) (string, error) {
+	var studentID int32
+	row := s.db.QueryRow(
+		`SELECT studentID FROM chats WHERE id = $1;`, chatID)
+	if err := row.Scan(&studentID); err != nil {
+		return "", e.StacktraceError(err)
+	}
+	var type1 string
+	row = s.db.QueryRow(
+		`SELECT socialType FROM students WHERE id = $1;`, studentID)
+	if err := row.Scan(&type1); err != nil {
+		return "", e.StacktraceError(err)
+	}
+	return type1, nil
+}
+
 func (s *Store) ValidateToken(tok string) (int, error) {
 	var classID int = -1
 	row := s.db.QueryRow(
-		context.Background(),
 		`SELECT id FROM classes WHERE inviteToken = $1;`, tok)
 	if err := row.Scan(&classID); err != nil {
 		return -1, e.StacktraceError(err)
@@ -80,7 +98,6 @@ func (s *Store) ValidateToken(tok string) (int, error) {
 func (s *Store) CreateStudent(in *proto.CreateStudentRequest) (int, error) {
 	var studID int = -1
 	err := s.db.QueryRow(
-		context.Background(),
 		`INSERT INTO students (name, socialType) VALUES ($1, $2) RETURNING id;`,
 		in.Name, in.Type,
 	).Scan(&studID)
@@ -94,7 +111,6 @@ func (s *Store) CreateChat(in *proto.CreateChatRequest) (int, error) {
 	var id int = -1
 	var teacherID int = -1
 	row := s.db.QueryRow(
-		context.Background(),
 		`SELECT teacherID FROM classes WHERE id = $1;`,
 		in.ClassID,
 	)
@@ -103,7 +119,6 @@ func (s *Store) CreateChat(in *proto.CreateChatRequest) (int, error) {
 	}
 
 	err := s.db.QueryRow(
-		context.Background(),
 		`INSERT INTO chats (teacherID, studentID, classID) VALUES ($1, $2, $3) RETURNING id;`,
 		teacherID, in.StudentID, in.ClassID,
 	).Scan(&id)
@@ -116,8 +131,7 @@ func (s *Store) CreateChat(in *proto.CreateChatRequest) (int, error) {
 func (s *Store) GetHomeworksByChatID(classID int) ([]*proto.HomeworkData, error) {
 	hws := []*proto.HomeworkData{}
 	rows, err := s.db.Query(
-		context.Background(),
-		`SELECT (id, title, description, file) FROM homeworks WHERE classID = $1;`,
+		`SELECT id, title, description, file FROM homeworks WHERE classID = $1;`,
 		classID,
 	)
 	if err != nil {
@@ -137,10 +151,13 @@ func (s *Store) GetHomeworksByChatID(classID int) ([]*proto.HomeworkData, error)
 }
 
 func (s *Store) CreateSolution(in *proto.SendSolutionRequest) error {
+	tmpAttach := ""
+	if in.Solution.AttachmentURLs != nil {
+		tmpAttach = in.Solution.AttachmentURLs[0]
+	}
 	_, err := s.db.Exec(
-		context.Background(),
-		`INSERT INTO solutions (hwID, studentID, text, time, file) VALUES ($1, $2, $3, $4, $5);`,
-		in.HomeworkID, in.StudentID, in.Solution.Text, time.Now().Format("2006.01.02 15:04:05"), in.Solution.AttachmentURLs[0],
+		`INSERT INTO solutions (hwID, studentID, text, createTime, file) VALUES ($1, $2, $3, $4, $5);`,
+		in.HomeworkID, in.StudentID, in.Solution.Text, time.Now().Format("2006.01.02 15:04:05"), tmpAttach,
 	)
 	if err != nil {
 		return e.StacktraceError(err)

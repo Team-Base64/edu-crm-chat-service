@@ -26,33 +26,27 @@ const docTemplate = `{
     "paths": {
         "/attach": {
             "post": {
-                "description": "sets teacher's attach",
+                "description": "Upload attach",
                 "consumes": [
                     "multipart/form-data"
                 ],
                 "produces": [
                     "application/json"
                 ],
-                "summary": "Set teacher's attach",
-                "operationId": "setAttach",
+                "summary": "Upload attach",
+                "operationId": "uploadAttach",
                 "parameters": [
                     {
                         "type": "file",
-                        "description": "teacher's attach",
+                        "description": "attach",
                         "name": "file",
                         "in": "formData",
                         "required": true
                     },
                     {
                         "type": "string",
-                        "description": "text",
-                        "name": "text",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Chat id",
-                        "name": "chatid",
+                        "description": "type: homework or solution or chat",
+                        "name": "type",
                         "in": "query",
                         "required": true
                     }
@@ -100,7 +94,7 @@ const docTemplate = `{
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
 	Host:             "127.0.0.1:8081",
-	BasePath:         "/api",
+	BasePath:         "/apichat",
 	Schemes:          []string{},
 	Title:            "TCRA API",
 	Description:      "EDUCRM back chat server.",

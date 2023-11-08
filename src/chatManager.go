@@ -7,7 +7,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
+	"main/domain/model"
 	m "main/domain/model"
 
 	//chat "main/src"
@@ -32,7 +34,7 @@ func NewChatManager(store StoreInterface, hub *Hub) *ChatManager {
 
 func (sm *ChatManager) StartChatTG(ch proto.BotChat_StartChatTGServer) error {
 	log.Println("start chat tg")
-	var mockChatID int32 = 1
+	//var mockChatID int32 = 1
 	defer log.Println("end chat tg")
 	errSending := errors.New("Empty")
 	//defer return errors.New("GRPC Consume: message channel closed")
@@ -41,11 +43,22 @@ func (sm *ChatManager) StartChatTG(ch proto.BotChat_StartChatTGServer) error {
 		for {
 			// отправка из вебсокета в бота
 			mes2 := <-sm.hub.MessagesToTGBot
-			if mes2.Text == "" {
+			// if mes2.Text == "" {
+			// 	continue
+			// }
+			if mes2.Text == "" && mes2.AttachmentURLs == nil {
 				continue
 			}
+
+			resp := proto.Message{Text: mes2.Text, ChatID: mes2.ChatID, AttachmentURLs: mes2.AttachmentURLs}
+			log.Println("writing mes to db: ", mes2)
+			err := sm.store.AddMessage(&model.CreateMessage{Text: resp.Text, ChatID: int(resp.ChatID), IsAuthorTeacher: true, IsRead: true, AttachmentURLs: resp.AttachmentURLs})
+			if err != nil {
+				log.Println(err)
+				errSending = err
+				break
+			}
 			log.Println("preparing mes to tg bot: ", mes2)
-			resp := proto.Message{Text: mes2.Text, ChatID: mockChatID, AttachmentURLs: mes2.AttachmentURLs}
 			if err := ch.Send(&resp); err != nil {
 				log.Println("1!!!!!!!!! error: ", err)
 				// if err.Error() == "rpc error: code = Canceled desc = context canceled" {
@@ -57,12 +70,7 @@ func (sm *ChatManager) StartChatTG(ch proto.BotChat_StartChatTGServer) error {
 				//continue
 				//return err
 			}
-			// err := sm.AddMessage(&model.CreateMessage{Text: resp.Text, ChatID: int(resp.ChatID), IsAuthorTeacher: true, IsRead: true})
-			// if err != nil {
-			// 	log.Println(err)
-			// 	errSending = err
-			// 	break
-			// }
+
 		}
 	}()
 	for {
@@ -80,26 +88,113 @@ func (sm *ChatManager) StartChatTG(ch proto.BotChat_StartChatTGServer) error {
 		}
 		if err != nil {
 			log.Println("2!!!!!!!!! error: ", err)
-			if err.Error() == "rpc error: code = Canceled desc = context canceled" {
-				log.Println("breaking grpc stream")
-				return err
-			}
+			// if err.Error() == "rpc error: code = Canceled desc = context canceled" {
+			// 	log.Println("breaking grpc stream")
+			// 	return err
+			// }
 			//continue
 			//break
+			log.Println("breaking grpc stream")
 			return err
 		}
 		log.Println("received mes from tg bot: ", req)
-		mes := m.MessageWebsocket{Text: req.Text, ChatID: mockChatID, Channel: "chat"}
+		mes := m.MessageWebsocket{Text: req.Text, ChatID: req.ChatID, Channel: "chat", AttachmentURLs: req.AttachmentURLs, CreateTime: time.Now()}
+
+		log.Println("writing mes to db: ", mes)
+		err = sm.store.AddMessage(&m.CreateMessage{Text: mes.Text, ChatID: int(mes.ChatID), IsAuthorTeacher: false, IsRead: false, AttachmentURLs: mes.AttachmentURLs})
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+
 		if sm.hub.chats[mes.ChatID] != nil {
-			log.Println("routing mes from tg bot to hub: ", req)
+			//log.Println("routing mes from tg bot to hub: ", req)
 			sm.hub.Broadcast <- &mes
 			log.Println("routing mes from tg bot to hub + added to broadcast: ", req)
-			err = sm.store.AddMessage(&m.CreateMessage{Text: mes.Text, ChatID: int(mes.ChatID), IsAuthorTeacher: false, IsRead: false})
+		}
+
+		//break
+	}
+	//return nil
+	//return errors.New("GRPC Consume: message channel closed")
+}
+
+func (sm *ChatManager) StartChatVK(ch proto.BotChat_StartChatVKServer) error {
+	log.Println("start chat vk")
+	//var mockChatID int32 = 1
+	defer log.Println("end chat vk")
+	errSending := errors.New("Empty")
+	//defer return errors.New("GRPC Consume: message channel closed")
+
+	go func() {
+		for {
+			// отправка из вебсокета в бота
+			mes2 := <-sm.hub.MessagesToVKBot
+			if mes2.Text == "" && mes2.AttachmentURLs == nil {
+				continue
+			}
+
+			resp := proto.Message{Text: mes2.Text, ChatID: mes2.ChatID, AttachmentURLs: mes2.AttachmentURLs}
+			log.Println("writing mes to db: ", mes2)
+			err := sm.store.AddMessage(&model.CreateMessage{Text: resp.Text, ChatID: int(resp.ChatID), IsAuthorTeacher: true, IsRead: true, AttachmentURLs: resp.AttachmentURLs})
 			if err != nil {
 				log.Println(err)
-				return err
+				errSending = err
+				break
 			}
-			log.Println("routing mes from tg bot to hub + added to db: ", req)
+			log.Println("preparing mes to vk bot: ", mes2)
+			if err := ch.Send(&resp); err != nil {
+				log.Println("1!!!!!!!!! error: ", err)
+				// if err.Error() == "rpc error: code = Canceled desc = context canceled" {
+				// 	log.Println("breaking grpc stream")
+				// }
+				log.Println("breaking grpc stream")
+				errSending = err
+				break
+				//continue
+				//return err
+			}
+
+		}
+	}()
+	for {
+		if errSending.Error() != "Empty" {
+			log.Println("err on sending goroutine: ", errSending)
+			return errSending
+		}
+
+		log.Println("waiting for mes from vk bot: ")
+		//приём сообщений от бота
+		req, err := ch.Recv()
+		if err == io.EOF {
+			log.Println("exit vk stream")
+			return err
+		}
+		if err != nil {
+			log.Println("2!!!!!!!!! error: ", err)
+			// if err.Error() == "rpc error: code = Canceled desc = context canceled" {
+
+			// 	return err
+			// }
+			//continue
+			//break
+			log.Println("breaking grpc stream")
+			return err
+		}
+		log.Println("received mes from vk bot: ", req)
+		mes := m.MessageWebsocket{Text: req.Text, ChatID: req.ChatID, Channel: "chat", AttachmentURLs: req.AttachmentURLs, CreateTime: time.Now()}
+
+		log.Println("writing mes to db: ", mes)
+		err = sm.store.AddMessage(&m.CreateMessage{Text: mes.Text, ChatID: int(mes.ChatID), IsAuthorTeacher: false, IsRead: false, AttachmentURLs: mes.AttachmentURLs})
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+
+		if sm.hub.chats[mes.ChatID] != nil {
+			//log.Println("routing mes from tg bot to hub: ", req)
+			sm.hub.Broadcast <- &mes
+			log.Println("routing mes from tg bot to hub + added to broadcast: ", req)
 		}
 
 		//break
@@ -154,7 +249,7 @@ func (sm *ChatManager) StartChatTG(ch proto.BotChat_StartChatTGServer) error {
 // }
 
 func (sm *ChatManager) UploadFile(ctx context.Context, req *proto.FileUploadRequest) (*proto.FileUploadResponse, error) {
-	log.Println("called UploadFile")
+	log.Println("called UploadFile", req.Mimetype, req.FileURL)
 
 	homeworkNum := uuid.New().String()
 
@@ -218,10 +313,27 @@ func (sm *ChatManager) BroadcastMsg(ctx context.Context, req *proto.BroadcastMes
 		log.Println(err)
 		return &proto.Nothing{}, err
 	}
+	log.Println(" Broadcast for chats: ", ids)
 	// ИСПРАВИТЬ!!!
 	for _, id := range *ids {
-		sm.hub.MessagesToTGBot <- &m.MessageWebsocket{ChatID: int32(id), Text: req.Title + "\n" + req.Description, AttachmentURLs: req.AttachmentURLs}
-		sm.hub.MessagesToVKBot <- &m.MessageWebsocket{ChatID: int32(id), Text: req.Title + "\n" + req.Description, AttachmentURLs: req.AttachmentURLs}
+		type1, err := sm.store.GetTypeByChatID(id)
+		if err != nil {
+			log.Println("err with mes into chat ", id, " : ", err)
+			//return &proto.Nothing{}, err
+		}
+		switch type1 {
+		case "tg":
+			sm.hub.MessagesToTGBot <- &m.MessageWebsocket{ChatID: int32(id), Text: req.Title + "\n" + req.Description, AttachmentURLs: req.AttachmentURLs}
+		case "vk":
+			sm.hub.MessagesToVKBot <- &m.MessageWebsocket{ChatID: int32(id), Text: req.Title + "\n" + req.Description, AttachmentURLs: req.AttachmentURLs}
+		default:
+		}
+		// err = sm.store.AddMessage(&m.CreateMessage{Text: req.Title + "\n" + req.Description, ChatID: id, IsAuthorTeacher: true, IsRead: false, AttachmentURLs: req.AttachmentURLs})
+		// if err != nil {
+		// 	log.Println("err with mes into chat ", id, " : ", err)
+		// 	//return err
+		// }
+
 	}
 
 	return &proto.Nothing{}, nil
@@ -238,7 +350,7 @@ func (sm *ChatManager) ValidateToken(ctx context.Context, req *proto.ValidateTok
 }
 
 func (sm *ChatManager) CreateStudent(ctx context.Context, req *proto.CreateStudentRequest) (*proto.CreateStudentResponse, error) {
-	log.Println("called CreateStudent " + req.Name)
+	log.Println("called CreateStudent "+req.Name, req.Type)
 	id, err := sm.store.CreateStudent(req)
 	if err != nil {
 		log.Println(err)
@@ -268,7 +380,7 @@ func (sm *ChatManager) GetHomeworks(ctx context.Context, req *proto.GetHomeworks
 }
 
 func (sm *ChatManager) SendSolution(ctx context.Context, req *proto.SendSolutionRequest) (*proto.SendSolutionResponse, error) {
-	log.Println("called GetHomeworks ")
+	log.Println("called SendSolution ", req.HomeworkID, req.Solution.Text, req.Solution.AttachmentURLs)
 	err := sm.store.CreateSolution(req)
 	if err != nil {
 		log.Println(err)

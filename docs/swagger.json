@@ -16,37 +16,31 @@
         "version": "1.0"
     },
     "host": "127.0.0.1:8081",
-    "basePath": "/api",
+    "basePath": "/apichat",
     "paths": {
         "/attach": {
             "post": {
-                "description": "sets teacher's attach",
+                "description": "Upload attach",
                 "consumes": [
                     "multipart/form-data"
                 ],
                 "produces": [
                     "application/json"
                 ],
-                "summary": "Set teacher's attach",
-                "operationId": "setAttach",
+                "summary": "Upload attach",
+                "operationId": "uploadAttach",
                 "parameters": [
                     {
                         "type": "file",
-                        "description": "teacher's attach",
+                        "description": "attach",
                         "name": "file",
                         "in": "formData",
                         "required": true
                     },
                     {
                         "type": "string",
-                        "description": "text",
-                        "name": "text",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Chat id",
-                        "name": "chatid",
+                        "description": "type: homework or solution or chat",
+                        "name": "type",
                         "in": "query",
                         "required": true
                     }

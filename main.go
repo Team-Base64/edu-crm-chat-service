@@ -1,7 +1,7 @@
 package main
 
 import (
-	"context"
+	"database/sql"
 	"log"
 	"net"
 	"net/http"
@@ -14,7 +14,6 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"github.com/jackc/pgx/v5"
 	"google.golang.org/grpc"
 
 	_ "main/docs"
@@ -37,13 +36,14 @@ func loggingAndCORSHeadersMiddleware(next http.Handler) http.Handler {
 func main() {
 	myRouter := mux.NewRouter()
 
-	db, err := pgx.Connect(context.Background(), os.Getenv(conf.UrlDB))
+	//db, err := pgx.Connect(context.Background(), os.Getenv(conf.UrlDB))
+	db, err := sql.Open("pgx", os.Getenv(conf.UrlDB))
 	if err != nil {
 		log.Fatalln("could not connect to database")
 	}
-	defer db.Close(context.Background())
+	defer db.Close()
 
-	if err := db.Ping(context.Background()); err != nil {
+	if err := db.Ping(); err != nil {
 		log.Fatalln("unable to reach database ", err)
 	}
 	log.Println("database is reachable")

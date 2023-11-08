@@ -60,14 +60,18 @@ func (c *Client) readPump() {
 			log.Println(e.StacktraceError(err))
 			return
 		}
-		log.Println("Received mes from websocket: ", "text:", req.Text, "chatid:", req.ChatID)
+		log.Println("Received mes from websocket: ", "text:", req.Text, "chatid:", req.ChatID, "attaches: ", req.AttachmentURLs)
 		c.hub.chats[req.ChatID] = c
 		c.hub.clientChats[c] = append(c.hub.clientChats[c], req.ChatID)
-		if req.ChatID == 1 {
-			c.hub.MessagesToTGBot <- req
-		} else if req.ChatID == 2 {
-			c.hub.MessagesToVKBot <- req
-		}
+		// if req.ChatID == 1 {
+		// 	c.hub.MessagesToTGBot <- req
+		// } else if req.ChatID == 2 {
+		// 	c.hub.MessagesToVKBot <- req
+		// }
+
+		c.hub.MessagesToTGBot <- req
+		c.hub.MessagesToVKBot <- req
+
 	}
 }
 

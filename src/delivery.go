@@ -68,7 +68,7 @@ func ReturnErrorJSON(w http.ResponseWriter, err error) {
 // @Accept  multipart/form-data
 // @Produce  json
 // @Param file formData file true "attach"
-// @Param type query string true "type"
+// @Param type query string true "type: homework or solution or chat"
 // @Success 200 {object} model.Response "ok"
 // @Failure 401 {object} model.Error "unauthorized - Access token is missing or invalid"
 // @Failure 500 {object} model.Error "internal Server Error - Request is valid but operation failed at server side"
@@ -146,5 +146,5 @@ func (api *Handler) UploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(&model.UploadAttachResponse{File: fileName})
+	json.NewEncoder(w).Encode(&model.UploadAttachResponse{File: "http://127.0.0.1:8080/" + fileName[1:]})
 }
