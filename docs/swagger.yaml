@@ -1,5 +1,12 @@
 basePath: /apichat
 definitions:
+  model.CreateCalendarResponse:
+    properties:
+      googleid:
+        type: string
+      id:
+        type: integer
+    type: object
   model.Error:
     properties:
       error: {}
@@ -56,4 +63,73 @@ paths:
           schema:
             $ref: '#/definitions/model.Error'
       summary: Upload attach
+  /calendar:
+    post:
+      consumes:
+      - application/json
+      description: Creates teacher's calendar
+      operationId: CreateCalendar
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.CreateCalendarResponse'
+        "401":
+          description: unauthorized - Access token is missing or invalid
+          schema:
+            $ref: '#/definitions/model.Error'
+        "500":
+          description: internal server error - Request is valid but operation failed
+            at server side
+          schema:
+            $ref: '#/definitions/model.Error'
+      summary: Creates teacher's calendar
+  /calendar/addevent:
+    post:
+      consumes:
+      - application/json
+      description: Creates teacher's calendar event
+      operationId: CreateCalendarEvent
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Response'
+        "401":
+          description: unauthorized - Access token is missing or invalid
+          schema:
+            $ref: '#/definitions/model.Error'
+        "500":
+          description: internal server error - Request is valid but operation failed
+            at server side
+          schema:
+            $ref: '#/definitions/model.Error'
+      summary: Creates teacher's calendar event
+  /oauth:
+    post:
+      consumes:
+      - application/json
+      description: Sets teacher's OAUTH2Token
+      operationId: SetOAUTH2Token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Response'
+        "401":
+          description: unauthorized - Access token is missing or invalid
+          schema:
+            $ref: '#/definitions/model.Error'
+        "500":
+          description: internal server error - Request is valid but operation failed
+            at server side
+          schema:
+            $ref: '#/definitions/model.Error'
+      summary: Sets teacher's OAUTH2Token
 swagger: "2.0"
