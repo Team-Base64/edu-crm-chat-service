@@ -10,9 +10,7 @@ var PortGRPC = ":8082"
 
 var BaseUrl = "/apichat"
 var PathWS = BaseUrl + "/ws"
-var PathAttach = BaseUrl + "/attach"
-var PathCalendar = BaseUrl + "/calendar"
-var PathAddEvent = BaseUrl + "/calendar/addevent"
+
 var PathDocs = BaseUrl + "/docs"
 
 var Headers = map[string]string{

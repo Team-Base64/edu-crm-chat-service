@@ -52,17 +52,12 @@ func main() {
 	go hub.Run()
 
 	Store := src.NewStore(db)
-	Handler := src.NewHandler(
-		Store,
-		hub,
-		os.Getenv(conf.BaseFilestorage),
-		os.Getenv(conf.PrefixFilestorage),
-	)
+	// Handler := src.NewHandler(
+	// 	Store,
+	// 	hub,
+	// )
 
 	myRouter.HandleFunc(conf.PathWS, func(w http.ResponseWriter, r *http.Request) { src.ServeWs(hub, w, r) })
-	myRouter.HandleFunc(conf.PathAttach, Handler.UploadFile).Methods(http.MethodPost, http.MethodOptions)
-	myRouter.HandleFunc(conf.PathCalendar, Handler.CreateCalendar).Methods(http.MethodPost, http.MethodOptions)
-	myRouter.HandleFunc(conf.PathAddEvent, Handler.CreateCalendarEvent).Methods(http.MethodPost, http.MethodOptions)
 	myRouter.PathPrefix(conf.PathDocs).Handler(httpSwagger.WrapHandler)
 	myRouter.Use(loggingAndCORSHeadersMiddleware)
 
