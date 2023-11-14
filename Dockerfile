@@ -15,6 +15,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /chat-servis main.go
 FROM scratch
 
 COPY --from=builder /chat-servis /chat-servis
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 EXPOSE 8081
 EXPOSE 8082
