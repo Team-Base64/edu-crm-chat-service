@@ -40,7 +40,7 @@ jobs:
           script_stop: true
           script: |
             cd ${{ secrets.TARGET_DOCKER_COMPOSE }}
-            echo "${{ secrets.CHAT_SERVICE_ENV }}" > ${{ vars.ENV_FILE_CHAT_SERVICE }}
+            echo '${{ secrets.CHAT_SERVICE_ENV }}' > ${{ vars.ENV_FILE_CHAT_SERVICE }}
             sed -i '/DRONE_SSH_PREV_COMMAND_EXIT_CODE/d' ${{ vars.ENV_FILE_CHAT_SERVICE }}
             docker compose stop
             docker compose pull ${{ env.CONTAINER }}
