@@ -22,6 +22,8 @@ import (
 	"google.golang.org/grpc/keepalive"
 )
 
+var urlDB string
+
 func loggingAndCORSHeadersMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Println(r.RequestURI, r.Method)
@@ -33,11 +35,19 @@ func loggingAndCORSHeadersMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+func init() {
+	var exist bool
+
+	urlDB, exist = os.LookupEnv(conf.UrlDB)
+	if !exist || len(urlDB) == 0 {
+		log.Fatalln("could not get database url from env")
+	}
+}
+
 func main() {
 	myRouter := mux.NewRouter()
 
-	//db, err := pgx.Connect(context.Background(), os.Getenv(conf.UrlDB))
-	db, err := sql.Open("pgx", os.Getenv(conf.UrlDB))
+	db, err := sql.Open("pgx", urlDB)
 	if err != nil {
 		log.Fatalln("could not connect to database")
 	}
@@ -52,10 +62,6 @@ func main() {
 	go hub.Run()
 
 	Store := src.NewStore(db)
-	// Handler := src.NewHandler(
-	// 	Store,
-	// 	hub,
-	// )
 
 	myRouter.HandleFunc(conf.PathWS, func(w http.ResponseWriter, r *http.Request) { src.ServeWs(hub, w, r) })
 	myRouter.PathPrefix(conf.PathDocs).Handler(httpSwagger.WrapHandler)
