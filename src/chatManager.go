@@ -21,14 +21,18 @@ import (
 
 type ChatManager struct {
 	proto.UnimplementedBotChatServer
-	store StoreInterface
-	hub   *Hub
+	store           StoreInterface
+	hub             *Hub
+	filestoragePath string
+	urlDomain       string
 }
 
-func NewChatManager(store StoreInterface, hub *Hub) *ChatManager {
+func NewChatManager(store StoreInterface, hub *Hub, fp string, ud string) *ChatManager {
 	return &ChatManager{
-		store: store,
-		hub:   hub,
+		store:           store,
+		hub:             hub,
+		filestoragePath: fp,
+		urlDomain:       ud,
 	}
 }
 
@@ -269,7 +273,7 @@ func (sm *ChatManager) UploadFile(ctx context.Context, req *proto.FileUploadRequ
 		return &proto.FileUploadResponse{InternalFileURL: ""}, err
 	}
 
-	fileName := "./filestorage/chat/attach_" + homeworkNum + fileExt
+	fileName := sm.filestoragePath + "/chat/" + homeworkNum + fileExt
 	f, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		log.Println("error create/open file")
@@ -288,9 +292,12 @@ func (sm *ChatManager) UploadFile(ctx context.Context, req *proto.FileUploadRequ
 	defer resp.Body.Close()
 
 	n, err := io.Copy(f, resp.Body)
+	if err != nil {
+		return &proto.FileUploadResponse{InternalFileURL: ""}, err
+	}
 	log.Println("saved file:", fileName, "size: ", n)
 
-	fileAddr := "http://127.0.0.1:8081/filestorage/chat/attach_" + homeworkNum + fileExt
+	fileAddr := sm.urlDomain + "/filestorage/chat/" + homeworkNum + fileExt
 	// mes := m.MessageWebsocket{Text: req.Text + "\n" + fileAddr, ChatID: 1, Channel: "chat"}
 	// if sm.hub.chats[mes.ChatID] != nil {
 	// 	log.Println("routing mes with attach from tg bot to hub: ", req)

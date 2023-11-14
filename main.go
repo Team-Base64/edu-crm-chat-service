@@ -23,6 +23,8 @@ import (
 )
 
 var urlDB string
+var filestoragePath string
+var urlDomain string
 
 func loggingAndCORSHeadersMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -42,6 +44,17 @@ func init() {
 	if !exist || len(urlDB) == 0 {
 		log.Fatalln("could not get database url from env")
 	}
+
+	filestoragePath, exist = os.LookupEnv(conf.FilestoragePath)
+	if !exist || len(filestoragePath) == 0 {
+		log.Fatalln("could not get filestorage path from env")
+	}
+
+	urlDomain, exist = os.LookupEnv(conf.UrlDomain)
+	if !exist || len(urlDomain) == 0 {
+		log.Fatalln("could not get url domain from env")
+	}
+
 }
 
 func main() {
@@ -79,7 +92,15 @@ func main() {
 			Timeout: 5 * time.Second,
 		}),
 	)
-	proto.RegisterBotChatServer(server, src.NewChatManager(Store, hub))
+	proto.RegisterBotChatServer(
+		server,
+		src.NewChatManager(
+			Store,
+			hub,
+			filestoragePath,
+			urlDomain,
+		),
+	)
 	log.Println("starting grpc server at " + conf.PortGRPC)
 	go server.Serve(lis)
 

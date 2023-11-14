@@ -1,6 +1,8 @@
 package BaseConfig
 
 var UrlDB = "URL_DB"
+var FilestoragePath = "FILESTORAGE_PATH"
+var UrlDomain = "URL_DOMAIN"
 
 var PortWS = ":8081"
 var PortGRPC = ":8082"
