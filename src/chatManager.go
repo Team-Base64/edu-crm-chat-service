@@ -284,3 +284,21 @@ func (sm *ChatManager) SendSolution(ctx context.Context, req *proto.SendSolution
 	}
 	return &proto.SendSolutionResponse{}, nil
 }
+
+func (sm *ChatManager) SendMsg(ctx context.Context, req *proto.Message) (*proto.Nothing, error) {
+	log.Println("called Send Msg from main backend")
+
+	socialType, err := sm.store.GetTypeByChatID(int(req.ChatID))
+	if err != nil {
+		log.Println("err with mes into chat ", req.ChatID, " : ", err)
+	}
+	switch socialType {
+	case "tg":
+		sm.hub.MessagesToTGBot <- &m.MessageWebsocket{ChatID: int32(req.ChatID), Text: req.Text, AttachmentURLs: req.AttachmentURLs}
+	case "vk":
+		sm.hub.MessagesToVKBot <- &m.MessageWebsocket{ChatID: int32(req.ChatID), Text: req.Text, AttachmentURLs: req.AttachmentURLs}
+	default:
+	}
+
+	return &proto.Nothing{}, nil
+}

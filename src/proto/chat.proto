@@ -89,10 +89,11 @@ message BroadcastMessage {
 
 service BotChat {
     rpc BroadcastMsg(BroadcastMessage) returns (Nothing);
+    rpc SendMsg(Message) returns (Nothing);
 
     rpc StartChatTG(stream Message) returns (stream Message);
     rpc StartChatVK(stream Message) returns (stream Message);
-    
+
 
     rpc UploadFile(FileUploadRequest) returns (FileUploadResponse);
     rpc ValidateToken (ValidateTokenRequest) returns (ValidateTokenResponse);
