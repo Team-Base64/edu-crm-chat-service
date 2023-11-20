@@ -68,7 +68,7 @@ func (c *Client) readPump() {
 		// } else if req.ChatID == 2 {
 		// 	c.hub.MessagesToVKBot <- req
 		// }
-
+		req.IsSavedToDB = true
 		c.hub.MessagesToTGBot <- req
 		c.hub.MessagesToVKBot <- req
 

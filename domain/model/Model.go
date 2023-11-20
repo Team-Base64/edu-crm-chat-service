@@ -24,6 +24,7 @@ type MessageWebsocket struct {
 	Channel        string    `json:"channel,omitempty"`
 	AttachmentURLs []string  `json:"attaches,omitempty"`
 	CreateTime     time.Time `json:"date,omitempty"`
+	IsSavedToDB    bool      `json:"-"`
 }
 
 type CreateBroadcastMessage struct {
