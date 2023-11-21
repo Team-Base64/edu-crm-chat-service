@@ -12,7 +12,6 @@ import (
 
 	e "main/domain/errors"
 	"main/domain/model"
-	m "main/domain/model"
 
 	proto "main/src/proto"
 
@@ -57,7 +56,7 @@ func (sm *ChatManager) StartChatTG(ch proto.BotChat_StartChatTGServer) error {
 				err := sm.store.AddMessage(&model.CreateMessage{Text: resp.Text, ChatID: int(resp.ChatID), IsAuthorTeacher: true, IsRead: true, AttachmentURLs: resp.AttachmentURLs})
 				if err != nil {
 					errSending = e.StacktraceError(err)
-				  log.Println(errSending)
+					log.Println(errSending)
 					break
 				}
 			}
@@ -88,10 +87,10 @@ func (sm *ChatManager) StartChatTG(ch proto.BotChat_StartChatTGServer) error {
 			return err
 		}
 		log.Println("received mes from tg bot: ", req)
-		mes := m.MessageWebsocket{Text: req.Text, ChatID: req.ChatID, Channel: "chat", AttachmentURLs: req.AttachmentURLs, CreateTime: time.Now(), IsSavedToDB: true}
+		mes := model.MessageWebsocket{Text: req.Text, ChatID: req.ChatID, Channel: "chat", AttachmentURLs: req.AttachmentURLs, CreateTime: time.Now(), IsSavedToDB: true}
 
 		log.Println("writing mes to db: ", mes)
-		err = sm.store.AddMessage(&m.CreateMessage{Text: mes.Text, ChatID: int(mes.ChatID), IsAuthorTeacher: false, IsRead: false, AttachmentURLs: mes.AttachmentURLs})
+		err = sm.store.AddMessage(&model.CreateMessage{Text: mes.Text, ChatID: int(mes.ChatID), IsAuthorTeacher: false, IsRead: false, AttachmentURLs: mes.AttachmentURLs})
 		if err != nil {
 			log.Println(e.StacktraceError(err))
 			return err
@@ -122,7 +121,7 @@ func (sm *ChatManager) StartChatVK(ch proto.BotChat_StartChatVKServer) error {
 				err := sm.store.AddMessage(&model.CreateMessage{Text: resp.Text, ChatID: int(resp.ChatID), IsAuthorTeacher: true, IsRead: true, AttachmentURLs: resp.AttachmentURLs})
 				if err != nil {
 					errSending = e.StacktraceError(err)
-				  log.Println(errSending)
+					log.Println(errSending)
 					break
 				}
 			}
@@ -152,10 +151,10 @@ func (sm *ChatManager) StartChatVK(ch proto.BotChat_StartChatVKServer) error {
 			return err
 		}
 		log.Println("received mes from vk bot: ", req)
-		mes := m.MessageWebsocket{Text: req.Text, ChatID: req.ChatID, Channel: "chat", AttachmentURLs: req.AttachmentURLs, CreateTime: time.Now(), IsSavedToDB: true}
+		mes := model.MessageWebsocket{Text: req.Text, ChatID: req.ChatID, Channel: "chat", AttachmentURLs: req.AttachmentURLs, CreateTime: time.Now(), IsSavedToDB: true}
 
 		log.Println("writing mes to db: ", mes)
-		err = sm.store.AddMessage(&m.CreateMessage{Text: mes.Text, ChatID: int(mes.ChatID), IsAuthorTeacher: false, IsRead: false, AttachmentURLs: mes.AttachmentURLs})
+		err = sm.store.AddMessage(&model.CreateMessage{Text: mes.Text, ChatID: int(mes.ChatID), IsAuthorTeacher: false, IsRead: false, AttachmentURLs: mes.AttachmentURLs})
 		if err != nil {
 			log.Println(e.StacktraceError(err))
 			return err
@@ -231,9 +230,9 @@ func (sm *ChatManager) BroadcastMsg(ctx context.Context, req *proto.BroadcastMes
 		}
 		switch type1 {
 		case "tg":
-			sm.hub.MessagesToTGBot <- &m.MessageWebsocket{ChatID: int32(id), Text: req.Title + "\n" + req.Description, AttachmentURLs: req.AttachmentURLs, IsSavedToDB: false}
+			sm.hub.MessagesToTGBot <- &model.MessageWebsocket{ChatID: int32(id), Text: req.Title + "\n" + req.Description, AttachmentURLs: req.AttachmentURLs, IsSavedToDB: false}
 		case "vk":
-			sm.hub.MessagesToVKBot <- &m.MessageWebsocket{ChatID: int32(id), Text: req.Title + "\n" + req.Description, AttachmentURLs: req.AttachmentURLs, IsSavedToDB: false}
+			sm.hub.MessagesToVKBot <- &model.MessageWebsocket{ChatID: int32(id), Text: req.Title + "\n" + req.Description, AttachmentURLs: req.AttachmentURLs, IsSavedToDB: false}
 		default:
 		}
 	}
@@ -290,7 +289,7 @@ func (sm *ChatManager) SendSolution(ctx context.Context, req *proto.SendSolution
 	return &proto.SendSolutionResponse{}, nil
 }
 
-func (sm *ChatManager) SendMsg(ctx context.Context, req *proto.Message) (*proto.Nothing, error) {
+func (sm *ChatManager) SendNotification(ctx context.Context, req *proto.Message) (*proto.Nothing, error) {
 	log.Println("called Send Msg from main backend")
 
 	socialType, err := sm.store.GetTypeByChatID(int(req.ChatID))
@@ -300,9 +299,9 @@ func (sm *ChatManager) SendMsg(ctx context.Context, req *proto.Message) (*proto.
 	}
 	switch socialType {
 	case "tg":
-		sm.hub.MessagesToTGBot <- &m.MessageWebsocket{ChatID: req.ChatID, Text: req.Text, AttachmentURLs: req.AttachmentURLs}
+		sm.hub.MessagesToTGBot <- &model.MessageWebsocket{ChatID: req.ChatID, Text: req.Text, AttachmentURLs: req.AttachmentURLs, IsSavedToDB: false}
 	case "vk":
-		sm.hub.MessagesToVKBot <- &m.MessageWebsocket{ChatID: req.ChatID, Text: req.Text, AttachmentURLs: req.AttachmentURLs}
+		sm.hub.MessagesToVKBot <- &model.MessageWebsocket{ChatID: req.ChatID, Text: req.Text, AttachmentURLs: req.AttachmentURLs, IsSavedToDB: false}
 	default:
 	}
 

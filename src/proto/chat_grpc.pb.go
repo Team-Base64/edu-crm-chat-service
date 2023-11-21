@@ -23,16 +23,16 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	BotChat_BroadcastMsg_FullMethodName  = "/chat.BotChat/BroadcastMsg"
-	BotChat_SendMsg_FullMethodName       = "/chat.BotChat/SendMsg"
-	BotChat_StartChatTG_FullMethodName   = "/chat.BotChat/StartChatTG"
-	BotChat_StartChatVK_FullMethodName   = "/chat.BotChat/StartChatVK"
-	BotChat_UploadFile_FullMethodName    = "/chat.BotChat/UploadFile"
-	BotChat_ValidateToken_FullMethodName = "/chat.BotChat/ValidateToken"
-	BotChat_CreateChat_FullMethodName    = "/chat.BotChat/CreateChat"
-	BotChat_GetHomeworks_FullMethodName  = "/chat.BotChat/GetHomeworks"
-	BotChat_CreateStudent_FullMethodName = "/chat.BotChat/CreateStudent"
-	BotChat_SendSolution_FullMethodName  = "/chat.BotChat/SendSolution"
+	BotChat_BroadcastMsg_FullMethodName     = "/chat.BotChat/BroadcastMsg"
+	BotChat_SendNotification_FullMethodName = "/chat.BotChat/SendNotification"
+	BotChat_StartChatTG_FullMethodName      = "/chat.BotChat/StartChatTG"
+	BotChat_StartChatVK_FullMethodName      = "/chat.BotChat/StartChatVK"
+	BotChat_UploadFile_FullMethodName       = "/chat.BotChat/UploadFile"
+	BotChat_ValidateToken_FullMethodName    = "/chat.BotChat/ValidateToken"
+	BotChat_CreateChat_FullMethodName       = "/chat.BotChat/CreateChat"
+	BotChat_GetHomeworks_FullMethodName     = "/chat.BotChat/GetHomeworks"
+	BotChat_CreateStudent_FullMethodName    = "/chat.BotChat/CreateStudent"
+	BotChat_SendSolution_FullMethodName     = "/chat.BotChat/SendSolution"
 )
 
 // BotChatClient is the client API for BotChat service.
@@ -40,7 +40,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type BotChatClient interface {
 	BroadcastMsg(ctx context.Context, in *BroadcastMessage, opts ...grpc.CallOption) (*Nothing, error)
-	SendMsg(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Nothing, error)
+	SendNotification(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Nothing, error)
 	StartChatTG(ctx context.Context, opts ...grpc.CallOption) (BotChat_StartChatTGClient, error)
 	StartChatVK(ctx context.Context, opts ...grpc.CallOption) (BotChat_StartChatVKClient, error)
 	UploadFile(ctx context.Context, in *FileUploadRequest, opts ...grpc.CallOption) (*FileUploadResponse, error)
@@ -68,9 +68,9 @@ func (c *botChatClient) BroadcastMsg(ctx context.Context, in *BroadcastMessage, 
 	return out, nil
 }
 
-func (c *botChatClient) SendMsg(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Nothing, error) {
+func (c *botChatClient) SendNotification(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Nothing, error) {
 	out := new(Nothing)
-	err := c.cc.Invoke(ctx, BotChat_SendMsg_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, BotChat_SendNotification_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +198,7 @@ func (c *botChatClient) SendSolution(ctx context.Context, in *SendSolutionReques
 // for forward compatibility
 type BotChatServer interface {
 	BroadcastMsg(context.Context, *BroadcastMessage) (*Nothing, error)
-	SendMsg(context.Context, *Message) (*Nothing, error)
+	SendNotification(context.Context, *Message) (*Nothing, error)
 	StartChatTG(BotChat_StartChatTGServer) error
 	StartChatVK(BotChat_StartChatVKServer) error
 	UploadFile(context.Context, *FileUploadRequest) (*FileUploadResponse, error)
@@ -217,8 +217,8 @@ type UnimplementedBotChatServer struct {
 func (UnimplementedBotChatServer) BroadcastMsg(context.Context, *BroadcastMessage) (*Nothing, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method BroadcastMsg not implemented")
 }
-func (UnimplementedBotChatServer) SendMsg(context.Context, *Message) (*Nothing, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SendMsg not implemented")
+func (UnimplementedBotChatServer) SendNotification(context.Context, *Message) (*Nothing, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendNotification not implemented")
 }
 func (UnimplementedBotChatServer) StartChatTG(BotChat_StartChatTGServer) error {
 	return status.Errorf(codes.Unimplemented, "method StartChatTG not implemented")
@@ -275,20 +275,20 @@ func _BotChat_BroadcastMsg_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
-func _BotChat_SendMsg_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _BotChat_SendNotification_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(Message)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BotChatServer).SendMsg(ctx, in)
+		return srv.(BotChatServer).SendNotification(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: BotChat_SendMsg_FullMethodName,
+		FullMethod: BotChat_SendNotification_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BotChatServer).SendMsg(ctx, req.(*Message))
+		return srv.(BotChatServer).SendNotification(ctx, req.(*Message))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -465,8 +465,8 @@ var BotChat_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _BotChat_BroadcastMsg_Handler,
 		},
 		{
-			MethodName: "SendMsg",
-			Handler:    _BotChat_SendMsg_Handler,
+			MethodName: "SendNotification",
+			Handler:    _BotChat_SendNotification_Handler,
 		},
 		{
 			MethodName: "UploadFile",

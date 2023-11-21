@@ -90,7 +90,7 @@ message BroadcastMessage {
 
 service BotChat {
     rpc BroadcastMsg(BroadcastMessage) returns (Nothing);
-    rpc SendMsg(Message) returns (Nothing);
+    rpc SendNotification(Message) returns (Nothing);
 
     rpc StartChatTG(stream Message) returns (stream Message);
     rpc StartChatVK(stream Message) returns (stream Message);
