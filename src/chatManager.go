@@ -7,8 +7,10 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
+	e "main/domain/errors"
 	"main/domain/model"
 	m "main/domain/model"
 
@@ -38,7 +40,7 @@ func (sm *ChatManager) StartChatTG(ch proto.BotChat_StartChatTGServer) error {
 	log.Println("start chat tg")
 
 	defer log.Println("end chat tg")
-	errSending := errors.New("Empty")
+	var errSending error = nil
 
 	go func() {
 		for {
@@ -53,22 +55,21 @@ func (sm *ChatManager) StartChatTG(ch proto.BotChat_StartChatTGServer) error {
 			log.Println("writing mes to db: ", mes2)
 			err := sm.store.AddMessage(&model.CreateMessage{Text: resp.Text, ChatID: int(resp.ChatID), IsAuthorTeacher: true, IsRead: true, AttachmentURLs: resp.AttachmentURLs})
 			if err != nil {
-				log.Println(err)
-				errSending = err
+				errSending = e.StacktraceError(err)
+				log.Println(errSending)
 				break
 			}
 			log.Println("preparing mes to tg bot: ", mes2)
 			if err := ch.Send(&resp); err != nil {
-				log.Println("1!!!!!!!!! error: ", err)
-				log.Println("breaking grpc stream")
-				errSending = err
+				errSending = e.StacktraceError(err)
+				log.Println(errSending)
 				break
 			}
 		}
 	}()
 	for {
-		if errSending.Error() != "Empty" {
-			log.Println("err on sending goroutine: ", errSending)
+		if errSending != nil {
+			log.Println(e.StacktraceError(errSending))
 			return errSending
 		}
 
@@ -76,12 +77,11 @@ func (sm *ChatManager) StartChatTG(ch proto.BotChat_StartChatTGServer) error {
 		//приём сообщений от бота
 		req, err := ch.Recv()
 		if err == io.EOF {
-			log.Println("exit tg stream")
+			log.Println(e.StacktraceError(err))
 			return err
 		}
 		if err != nil {
-			log.Println("2!!!!!!!!! error: ", err)
-			log.Println("breaking grpc stream")
+			log.Println(e.StacktraceError(err))
 			return err
 		}
 		log.Println("received mes from tg bot: ", req)
@@ -90,7 +90,7 @@ func (sm *ChatManager) StartChatTG(ch proto.BotChat_StartChatTGServer) error {
 		log.Println("writing mes to db: ", mes)
 		err = sm.store.AddMessage(&m.CreateMessage{Text: mes.Text, ChatID: int(mes.ChatID), IsAuthorTeacher: false, IsRead: false, AttachmentURLs: mes.AttachmentURLs})
 		if err != nil {
-			log.Println(err)
+			log.Println(e.StacktraceError(err))
 			return err
 		}
 
@@ -104,7 +104,7 @@ func (sm *ChatManager) StartChatTG(ch proto.BotChat_StartChatTGServer) error {
 func (sm *ChatManager) StartChatVK(ch proto.BotChat_StartChatVKServer) error {
 	log.Println("start chat vk")
 	defer log.Println("end chat vk")
-	errSending := errors.New("Empty")
+	var errSending error = nil
 	go func() {
 		for {
 			// отправка из вебсокета в бота
@@ -116,22 +116,21 @@ func (sm *ChatManager) StartChatVK(ch proto.BotChat_StartChatVKServer) error {
 			log.Println("writing mes to db: ", mes2)
 			err := sm.store.AddMessage(&model.CreateMessage{Text: resp.Text, ChatID: int(resp.ChatID), IsAuthorTeacher: true, IsRead: true, AttachmentURLs: resp.AttachmentURLs})
 			if err != nil {
-				log.Println(err)
-				errSending = err
+				errSending = e.StacktraceError(err)
+				log.Println(errSending)
 				break
 			}
 			log.Println("preparing mes to vk bot: ", mes2)
 			if err := ch.Send(&resp); err != nil {
-				log.Println("1!!!!!!!!! error: ", err)
-				log.Println("breaking grpc stream")
-				errSending = err
+				errSending = e.StacktraceError(err)
+				log.Println(errSending)
 				break
 			}
 		}
 	}()
 	for {
 		if errSending.Error() != "Empty" {
-			log.Println("err on sending goroutine: ", errSending)
+			log.Println(e.StacktraceError(errSending))
 			return errSending
 		}
 
@@ -139,12 +138,11 @@ func (sm *ChatManager) StartChatVK(ch proto.BotChat_StartChatVKServer) error {
 		//приём сообщений от бота
 		req, err := ch.Recv()
 		if err == io.EOF {
-			log.Println("exit vk stream")
+			log.Println(e.StacktraceError(err))
 			return err
 		}
 		if err != nil {
-			log.Println("2!!!!!!!!! error: ", err)
-			log.Println("breaking grpc stream")
+			log.Println(e.StacktraceError(err))
 			return err
 		}
 		log.Println("received mes from vk bot: ", req)
@@ -153,7 +151,7 @@ func (sm *ChatManager) StartChatVK(ch proto.BotChat_StartChatVKServer) error {
 		log.Println("writing mes to db: ", mes)
 		err = sm.store.AddMessage(&m.CreateMessage{Text: mes.Text, ChatID: int(mes.ChatID), IsAuthorTeacher: false, IsRead: false, AttachmentURLs: mes.AttachmentURLs})
 		if err != nil {
-			log.Println(err)
+			log.Println(e.StacktraceError(err))
 			return err
 		}
 
@@ -188,20 +186,21 @@ func (sm *ChatManager) UploadFile(ctx context.Context, req *proto.FileUploadRequ
 	fileName := sm.filestoragePath + "/chat/" + homeworkNum + fileExt
 	f, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
-		log.Println("error create/open file")
+		log.Println(e.StacktraceError(err))
 		return &proto.FileUploadResponse{InternalFileURL: ""}, err
 	}
 	defer f.Close()
 
 	resp, err := http.Get(req.FileURL)
 	if err != nil {
-		log.Println(err)
+		log.Println(e.StacktraceError(err))
 		return &proto.FileUploadResponse{InternalFileURL: ""}, err
 	}
 	defer resp.Body.Close()
 
 	n, err := io.Copy(f, resp.Body)
 	if err != nil {
+		log.Println(e.StacktraceError(err))
 		return &proto.FileUploadResponse{InternalFileURL: ""}, err
 	}
 	log.Println("saved file:", fileName, "size: ", n)
@@ -214,7 +213,7 @@ func (sm *ChatManager) BroadcastMsg(ctx context.Context, req *proto.BroadcastMes
 	log.Println("called Broadcast Msg from main backend")
 	ids, err := sm.store.GetChatsByClassID(int(req.ClassID))
 	if err != nil {
-		log.Println(err)
+		log.Println(e.StacktraceError(err))
 		return &proto.Nothing{}, err
 	}
 	log.Println(" Broadcast for chats: ", ids)
@@ -222,7 +221,7 @@ func (sm *ChatManager) BroadcastMsg(ctx context.Context, req *proto.BroadcastMes
 	for _, id := range *ids {
 		type1, err := sm.store.GetTypeByChatID(id)
 		if err != nil {
-			log.Println("err with mes into chat ", id, " : ", err)
+			log.Println(e.StacktraceError(err), errors.New("chatid: "+strconv.Itoa(id)))
 		}
 		switch type1 {
 		case "tg":
@@ -239,7 +238,7 @@ func (sm *ChatManager) ValidateToken(ctx context.Context, req *proto.ValidateTok
 	log.Println("called ValidateToken " + req.Token)
 	id, err := sm.store.ValidateToken(req.Token)
 	if err != nil {
-		log.Println(err)
+		log.Println(e.StacktraceError(err))
 		return &proto.ValidateTokenResponse{ClassID: -1}, err
 	}
 	return &proto.ValidateTokenResponse{ClassID: int32(id)}, nil
@@ -249,7 +248,7 @@ func (sm *ChatManager) CreateStudent(ctx context.Context, req *proto.CreateStude
 	log.Println("called CreateStudent "+req.Name, req.Type)
 	id, err := sm.store.CreateStudent(req)
 	if err != nil {
-		log.Println(err)
+		log.Println(e.StacktraceError(err))
 		return &proto.CreateStudentResponse{StudentID: -1}, err
 	}
 	return &proto.CreateStudentResponse{StudentID: int32(id)}, nil
@@ -259,7 +258,7 @@ func (sm *ChatManager) CreateChat(ctx context.Context, req *proto.CreateChatRequ
 	log.Println("called CreateChat ")
 	id, err := sm.store.CreateChat(req)
 	if err != nil {
-		log.Println(err)
+		log.Println(e.StacktraceError(err))
 		return &proto.CreateChatResponse{InternalChatID: -1}, err
 	}
 	return &proto.CreateChatResponse{InternalChatID: int32(id)}, nil
@@ -269,7 +268,7 @@ func (sm *ChatManager) GetHomeworks(ctx context.Context, req *proto.GetHomeworks
 	log.Println("called GetHomeworks ")
 	hws, err := sm.store.GetHomeworksByChatID(int(req.ClassID))
 	if err != nil {
-		log.Println(err)
+		log.Println(e.StacktraceError(err))
 		return &proto.GetHomeworksResponse{Homeworks: nil}, err
 	}
 	return &proto.GetHomeworksResponse{Homeworks: hws}, nil
@@ -279,7 +278,7 @@ func (sm *ChatManager) SendSolution(ctx context.Context, req *proto.SendSolution
 	log.Println("called SendSolution ", req.HomeworkID, req.Solution.Text, req.Solution.AttachmentURLs)
 	err := sm.store.CreateSolution(req)
 	if err != nil {
-		log.Println(err)
+		log.Println(e.StacktraceError(err))
 		return &proto.SendSolutionResponse{}, err
 	}
 	return &proto.SendSolutionResponse{}, nil
@@ -290,13 +289,14 @@ func (sm *ChatManager) SendMsg(ctx context.Context, req *proto.Message) (*proto.
 
 	socialType, err := sm.store.GetTypeByChatID(int(req.ChatID))
 	if err != nil {
-		log.Println("err with mes into chat ", req.ChatID, " : ", err)
+		log.Println(e.StacktraceError(err), errors.New("chatid: "+strconv.Itoa(int(req.ChatID))))
+		return &proto.Nothing{}, err
 	}
 	switch socialType {
 	case "tg":
-		sm.hub.MessagesToTGBot <- &m.MessageWebsocket{ChatID: int32(req.ChatID), Text: req.Text, AttachmentURLs: req.AttachmentURLs}
+		sm.hub.MessagesToTGBot <- &m.MessageWebsocket{ChatID: req.ChatID, Text: req.Text, AttachmentURLs: req.AttachmentURLs}
 	case "vk":
-		sm.hub.MessagesToVKBot <- &m.MessageWebsocket{ChatID: int32(req.ChatID), Text: req.Text, AttachmentURLs: req.AttachmentURLs}
+		sm.hub.MessagesToVKBot <- &m.MessageWebsocket{ChatID: req.ChatID, Text: req.Text, AttachmentURLs: req.AttachmentURLs}
 	default:
 	}
 
