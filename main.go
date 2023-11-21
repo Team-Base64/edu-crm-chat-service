@@ -40,11 +40,29 @@ func loggingAndCORSHeadersMiddleware(next http.Handler) http.Handler {
 func init() {
 	var exist bool
 
-	urlDB, exist = os.LookupEnv(conf.UrlDB)
-	if !exist || len(urlDB) == 0 {
-		log.Fatalln("could not get database url from env")
+	pgUser, exist := os.LookupEnv(conf.PG_USER)
+	if !exist || len(pgUser) == 0 {
+		log.Fatalln("could not get database host from env")
+	}
+	pgPwd, exist := os.LookupEnv(conf.PG_PWD)
+	if !exist || len(pgPwd) == 0 {
+		log.Fatalln("could not get database password from env")
+	}
+	pgHost, exist := os.LookupEnv(conf.PG_HOST)
+	if !exist || len(pgHost) == 0 {
+		log.Fatalln("could not get database host from env")
+	}
+	pgPort, exist := os.LookupEnv(conf.PG_PORT)
+	if !exist || len(pgPort) == 0 {
+		log.Fatalln("could not get database port from env")
+	}
+	pgDB, exist := os.LookupEnv(conf.PG_DB)
+	if !exist || len(pgDB) == 0 {
+		log.Fatalln("could not get database name from env")
 	}
 
+	urlDB = "postgres://" + pgUser + ":" + pgPwd + "@" + pgHost + ":" + pgPort + "/" + pgDB
+	log.Println(urlDB)
 	filestoragePath, exist = os.LookupEnv(conf.FilestoragePath)
 	if !exist || len(filestoragePath) == 0 {
 		log.Fatalln("could not get filestorage path from env")
