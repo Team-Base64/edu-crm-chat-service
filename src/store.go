@@ -105,7 +105,7 @@ func (s *Store) CreateStudent(in *proto.CreateStudentRequest) (int, error) {
 		return -1, e.StacktraceError(err)
 	}
 	_, err = s.db.Exec(
-		`INSERT INTO classes_students (classID, studentID) VALUES ($1, $2);`, 1, studID)
+		`INSERT INTO classes_students (classID, studentID) VALUES ($1, $2);`, in.ClassID, studID)
 	if err != nil {
 		return -1, e.StacktraceError(err)
 	}

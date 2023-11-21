@@ -52,13 +52,16 @@ func (sm *ChatManager) StartChatTG(ch proto.BotChat_StartChatTGServer) error {
 			}
 
 			resp := proto.Message{Text: mes2.Text, ChatID: mes2.ChatID, AttachmentURLs: mes2.AttachmentURLs}
-			log.Println("writing mes to db: ", mes2)
-			err := sm.store.AddMessage(&model.CreateMessage{Text: resp.Text, ChatID: int(resp.ChatID), IsAuthorTeacher: true, IsRead: true, AttachmentURLs: resp.AttachmentURLs})
-			if err != nil {
-				errSending = e.StacktraceError(err)
-				log.Println(errSending)
-				break
+			if !mes2.IsSavedToDB {
+				log.Println("writing mes to db: ", mes2)
+				err := sm.store.AddMessage(&model.CreateMessage{Text: resp.Text, ChatID: int(resp.ChatID), IsAuthorTeacher: true, IsRead: true, AttachmentURLs: resp.AttachmentURLs})
+				if err != nil {
+					errSending = e.StacktraceError(err)
+				  log.Println(errSending)
+					break
+				}
 			}
+
 			log.Println("preparing mes to tg bot: ", mes2)
 			if err := ch.Send(&resp); err != nil {
 				errSending = e.StacktraceError(err)
@@ -85,7 +88,7 @@ func (sm *ChatManager) StartChatTG(ch proto.BotChat_StartChatTGServer) error {
 			return err
 		}
 		log.Println("received mes from tg bot: ", req)
-		mes := m.MessageWebsocket{Text: req.Text, ChatID: req.ChatID, Channel: "chat", AttachmentURLs: req.AttachmentURLs, CreateTime: time.Now()}
+		mes := m.MessageWebsocket{Text: req.Text, ChatID: req.ChatID, Channel: "chat", AttachmentURLs: req.AttachmentURLs, CreateTime: time.Now(), IsSavedToDB: true}
 
 		log.Println("writing mes to db: ", mes)
 		err = sm.store.AddMessage(&m.CreateMessage{Text: mes.Text, ChatID: int(mes.ChatID), IsAuthorTeacher: false, IsRead: false, AttachmentURLs: mes.AttachmentURLs})
@@ -113,12 +116,15 @@ func (sm *ChatManager) StartChatVK(ch proto.BotChat_StartChatVKServer) error {
 				continue
 			}
 			resp := proto.Message{Text: mes2.Text, ChatID: mes2.ChatID, AttachmentURLs: mes2.AttachmentURLs}
-			log.Println("writing mes to db: ", mes2)
-			err := sm.store.AddMessage(&model.CreateMessage{Text: resp.Text, ChatID: int(resp.ChatID), IsAuthorTeacher: true, IsRead: true, AttachmentURLs: resp.AttachmentURLs})
-			if err != nil {
-				errSending = e.StacktraceError(err)
-				log.Println(errSending)
-				break
+
+			if !mes2.IsSavedToDB {
+				log.Println("writing mes to db: ", mes2)
+				err := sm.store.AddMessage(&model.CreateMessage{Text: resp.Text, ChatID: int(resp.ChatID), IsAuthorTeacher: true, IsRead: true, AttachmentURLs: resp.AttachmentURLs})
+				if err != nil {
+					errSending = e.StacktraceError(err)
+				  log.Println(errSending)
+					break
+				}
 			}
 			log.Println("preparing mes to vk bot: ", mes2)
 			if err := ch.Send(&resp); err != nil {
@@ -146,7 +152,7 @@ func (sm *ChatManager) StartChatVK(ch proto.BotChat_StartChatVKServer) error {
 			return err
 		}
 		log.Println("received mes from vk bot: ", req)
-		mes := m.MessageWebsocket{Text: req.Text, ChatID: req.ChatID, Channel: "chat", AttachmentURLs: req.AttachmentURLs, CreateTime: time.Now()}
+		mes := m.MessageWebsocket{Text: req.Text, ChatID: req.ChatID, Channel: "chat", AttachmentURLs: req.AttachmentURLs, CreateTime: time.Now(), IsSavedToDB: true}
 
 		log.Println("writing mes to db: ", mes)
 		err = sm.store.AddMessage(&m.CreateMessage{Text: mes.Text, ChatID: int(mes.ChatID), IsAuthorTeacher: false, IsRead: false, AttachmentURLs: mes.AttachmentURLs})
@@ -225,9 +231,9 @@ func (sm *ChatManager) BroadcastMsg(ctx context.Context, req *proto.BroadcastMes
 		}
 		switch type1 {
 		case "tg":
-			sm.hub.MessagesToTGBot <- &m.MessageWebsocket{ChatID: int32(id), Text: req.Title + "\n" + req.Description, AttachmentURLs: req.AttachmentURLs}
+			sm.hub.MessagesToTGBot <- &m.MessageWebsocket{ChatID: int32(id), Text: req.Title + "\n" + req.Description, AttachmentURLs: req.AttachmentURLs, IsSavedToDB: false}
 		case "vk":
-			sm.hub.MessagesToVKBot <- &m.MessageWebsocket{ChatID: int32(id), Text: req.Title + "\n" + req.Description, AttachmentURLs: req.AttachmentURLs}
+			sm.hub.MessagesToVKBot <- &m.MessageWebsocket{ChatID: int32(id), Text: req.Title + "\n" + req.Description, AttachmentURLs: req.AttachmentURLs, IsSavedToDB: false}
 		default:
 		}
 	}
