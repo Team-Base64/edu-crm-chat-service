@@ -1,6 +1,10 @@
 package BaseConfig
 
-var UrlDB = "URL_DB"
+var PG_USER = "POSTGRES_USER"
+var PG_HOST = "POSTGRES_HOST"
+var PG_PWD = "POSTGRES_PASSWORD"
+var PG_PORT = "POSTGRES_PORT"
+var PG_DB = "POSTGRES_DB"
 var FilestoragePath = "FILESTORAGE_PATH"
 var UrlDomain = "URL_DOMAIN"
 
