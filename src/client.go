@@ -63,11 +63,7 @@ func (c *Client) readPump() {
 		log.Println("Received mes from websocket: ", "text:", req.Text, "chatid:", req.ChatID, "attaches: ", req.AttachmentURLs)
 		c.hub.chats[req.ChatID] = c
 		c.hub.clientChats[c] = append(c.hub.clientChats[c], req.ChatID)
-		// if req.ChatID == 1 {
-		// 	c.hub.MessagesToTGBot <- req
-		// } else if req.ChatID == 2 {
-		// 	c.hub.MessagesToVKBot <- req
-		// }
+
 		req.IsSavedToDB = true
 		switch type1 := req.SocialType; type1 {
 		case "tg":
