@@ -20,7 +20,7 @@ type CreateMessage struct {
 
 type MessageWebsocket struct {
 	Text           string    `json:"text"`
-	ChatID         int32     `json:"chatid"`
+	ChatID         int32     `json:"chatID"`
 	Channel        string    `json:"channel,omitempty"`
 	AttachmentURLs []string  `json:"attaches,omitempty"`
 	CreateTime     time.Time `json:"date,omitempty"`
