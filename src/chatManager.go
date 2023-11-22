@@ -134,7 +134,7 @@ func (sm *ChatManager) StartChatVK(ch proto.BotChat_StartChatVKServer) error {
 		}
 	}()
 	for {
-		if errSending.Error() != "Empty" {
+		if errSending != nil {
 			log.Println(e.StacktraceError(errSending))
 			return errSending
 		}
