@@ -50,15 +50,15 @@ func (sm *ChatManager) StartChatTG(ch proto.BotChat_StartChatTGServer) error {
 			}
 
 			resp := proto.Message{Text: mes2.Text, ChatID: mes2.ChatID, AttachmentURLs: mes2.AttachmentURLs}
-			if !mes2.IsSavedToDB {
-				log.Println("writing mes to db: ", mes2)
-				err := sm.store.AddMessage(&model.CreateMessage{Text: resp.Text, ChatID: int(resp.ChatID), IsAuthorTeacher: true, IsRead: true, AttachmentURLs: resp.AttachmentURLs})
-				if err != nil {
-					log.Println(err)
-					errSending = err
-					break
-				}
+			//if !mes2.IsSavedToDB {
+			log.Println("writing mes to db: ", mes2)
+			err := sm.store.AddMessage(&model.CreateMessage{Text: resp.Text, ChatID: int(resp.ChatID), IsAuthorTeacher: true, IsRead: true, AttachmentURLs: resp.AttachmentURLs})
+			if err != nil {
+				log.Println(err)
+				errSending = err
+				break
 			}
+			//}
 
 			log.Println("preparing mes to tg bot: ", mes2)
 			if err := ch.Send(&resp); err != nil {
@@ -117,15 +117,15 @@ func (sm *ChatManager) StartChatVK(ch proto.BotChat_StartChatVKServer) error {
 			}
 			resp := proto.Message{Text: mes2.Text, ChatID: mes2.ChatID, AttachmentURLs: mes2.AttachmentURLs}
 
-			if !mes2.IsSavedToDB {
-				log.Println("writing mes to db: ", mes2)
-				err := sm.store.AddMessage(&model.CreateMessage{Text: resp.Text, ChatID: int(resp.ChatID), IsAuthorTeacher: true, IsRead: true, AttachmentURLs: resp.AttachmentURLs})
-				if err != nil {
-					log.Println(err)
-					errSending = err
-					break
-				}
+			//if !mes2.IsSavedToDB {
+			log.Println("writing mes to db: ", mes2)
+			err := sm.store.AddMessage(&model.CreateMessage{Text: resp.Text, ChatID: int(resp.ChatID), IsAuthorTeacher: true, IsRead: true, AttachmentURLs: resp.AttachmentURLs})
+			if err != nil {
+				log.Println(err)
+				errSending = err
+				break
 			}
+			//}
 			log.Println("preparing mes to vk bot: ", mes2)
 			if err := ch.Send(&resp); err != nil {
 				log.Println("1!!!!!!!!! error: ", err)

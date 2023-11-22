@@ -105,7 +105,7 @@ func (c *Client) writePump() {
 				log.Println(e.StacktraceError(err))
 				return
 			}
-
+			//req
 			w.Write(req)
 			c.hub.chats[message.ChatID] = c
 			c.hub.clientChats[c] = append(c.hub.clientChats[c], message.ChatID)
