@@ -69,8 +69,12 @@ func (c *Client) readPump() {
 		// 	c.hub.MessagesToVKBot <- req
 		// }
 		req.IsSavedToDB = true
-		c.hub.MessagesToTGBot <- req
-		c.hub.MessagesToVKBot <- req
+		switch type1 := req.SocialType; type1 {
+		case "tg":
+			c.hub.MessagesToTGBot <- req
+		case "vk":
+			c.hub.MessagesToVKBot <- req
+		}
 
 	}
 }

@@ -132,7 +132,7 @@ func (s *Store) CreateChat(in *proto.CreateChatRequest) (int, error) {
 func (s *Store) GetHomeworksByChatID(classID int) ([]*proto.HomeworkData, error) {
 	hws := []*proto.HomeworkData{}
 	rows, err := s.db.Query(
-		`SELECT id, title, description, file FROM homeworks WHERE classID = $1;`,
+		`SELECT id, title, description FROM homeworks WHERE classID = $1;`,
 		classID,
 	)
 	if err != nil {
@@ -140,12 +140,12 @@ func (s *Store) GetHomeworksByChatID(classID int) ([]*proto.HomeworkData, error)
 	}
 	defer rows.Close()
 	for rows.Next() {
-		tmp := proto.HomeworkData{}
-		tmpFileString := ""
-		if err := rows.Scan(&tmp.HomeworkID, &tmp.Title, &tmp.Description, &tmpFileString); err != nil {
+		tmp := proto.HomeworkData{AttachmentURLs: []string{}}
+		//tmpFileString := ""
+		if err := rows.Scan(&tmp.HomeworkID, &tmp.Title, &tmp.Description); err != nil {
 			return nil, e.StacktraceError(err)
 		}
-		tmp.AttachmentURLs = append(tmp.AttachmentURLs, tmpFileString)
+		//tmp.AttachmentURLs = append(tmp.AttachmentURLs, tmpFileString)
 		hws = append(hws, &tmp)
 	}
 	return hws, nil
