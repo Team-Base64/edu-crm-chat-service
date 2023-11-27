@@ -8,6 +8,8 @@ var PG_DB = "POSTGRES_DB"
 var FilestoragePath = "FILESTORAGE_PATH"
 var UrlDomain = "URL_DOMAIN"
 
+//var URL_DB = "URL_DB"
+
 var PortWS = ":8081"
 var PortGRPC = ":8082"
 

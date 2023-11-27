@@ -63,6 +63,12 @@ func init() {
 
 	urlDB = "postgres://" + pgUser + ":" + pgPwd + "@" + pgHost + ":" + pgPort + "/" + pgDB
 
+	// urlDBs, exist := os.LookupEnv(conf.URL_DB)
+	// if !exist || len(urlDBs) == 0 {
+	// 	log.Fatalln("could not get database name from env")
+	// }
+	// urlDB = urlDBs
+
 	filestoragePath, exist = os.LookupEnv(conf.FilestoragePath)
 	if !exist || len(filestoragePath) == 0 {
 		log.Fatalln("could not get filestorage path from env")
