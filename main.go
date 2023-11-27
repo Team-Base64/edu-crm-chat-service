@@ -67,6 +67,7 @@ func init() {
 	// if !exist || len(urlDBs) == 0 {
 	// 	log.Fatalln("could not get database name from env")
 	// }
+
 	// urlDB = urlDBs
 
 	filestoragePath, exist = os.LookupEnv(conf.FilestoragePath)
