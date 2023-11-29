@@ -116,7 +116,7 @@ func (sm *ChatManager) StartChatVK(ch proto.BotChat_StartChatVKServer) error {
 			}
 			resp := proto.Message{Text: mes2.Text, ChatID: mes2.ChatID, AttachmentURLs: mes2.AttachmentURLs}
 
-			if !mes2.IsSavedToDB {
+			if mes2.IsSavedToDB {
 				log.Println("writing mes to db: ", mes2)
 				err := sm.store.AddMessage(&model.CreateMessage{Text: resp.Text, ChatID: int(resp.ChatID), IsAuthorTeacher: true, IsRead: true, AttachmentURLs: resp.AttachmentURLs})
 				if err != nil {
