@@ -152,13 +152,13 @@ func (s *Store) GetHomeworksByChatID(classID int) ([]*proto.HomeworkData, error)
 }
 
 func (s *Store) CreateSolution(in *proto.SendSolutionRequest) error {
-	tmpAttach := ""
+	tmpAttach := []string{}
 	if in.Solution.AttachmentURLs != nil {
-		tmpAttach = in.Solution.AttachmentURLs[0]
+		tmpAttach = in.Solution.AttachmentURLs
 	}
 	_, err := s.db.Exec(
-		`INSERT INTO solutions (homeworkID, studentID, text, createTime, file) VALUES ($1, $2, $3, $4, $5);`,
-		in.HomeworkID, in.StudentID, in.Solution.Text, time.Now().Format("2006.01.02 15:04:05"), tmpAttach,
+		`INSERT INTO solutions (homeworkID, studentID, text, createTime, files) VALUES ($1, $2, $3, $4, $5);`,
+		in.HomeworkID, in.StudentID, in.Solution.Text, time.Now().Format("2006.01.02 15:04:05"), (*pq.StringArray)(&tmpAttach),
 	)
 	if err != nil {
 		return e.StacktraceError(err)
