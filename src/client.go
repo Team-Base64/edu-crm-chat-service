@@ -68,10 +68,6 @@ func (c *Client) readPump() {
 			return
 		}
 		log.Println("Received mes from websocket: ", "text:", req.Text, "chatid:", req.ChatID, "attaches: ", req.AttachmentURLs)
-
-		//c.hub.chats[req.ChatID] = c
-		//c.hub.clientChats[c] = append(c.hub.clientChats[c], req.ChatID)
-
 		req.IsSavedToDB = true
 		switch type1 := req.SocialType; type1 {
 		case "tg":
@@ -111,8 +107,6 @@ func (c *Client) writePump() {
 			}
 
 			w.Write(req)
-			//c.hub.chats[message.ChatID] = c
-			//c.hub.clientChats[c] = append(c.hub.clientChats[c], message.ChatID)
 			log.Println("send mes to websocket: ", message)
 
 			if err := w.Close(); err != nil {
@@ -158,31 +152,12 @@ func (api *Handler) ServeWs(w http.ResponseWriter, r *http.Request) {
 	client := &Client{hub: api.hub, conn: conn, send: make(chan *m.MessageWebsocket)}
 	client.hub.register <- client
 
-	// if cl, ok := api.hub.teachers[usLogin]; ok {
-	// 	delete(cl.hub.teachers, usLogin)
-	// 	delete(cl.hub.clientTeacher, cl)
-	// 	cl.hub.unregister <- cl
-	// 	cl.conn.Close()
-	// }
 	if _, ok := api.hub.teacherClients[usLogin]; !ok {
 		api.hub.teacherClients[usLogin] = make(map[*Client]struct{})
-		//api.hub.teacherClients[usLogin][client] = struct{}{}
 	}
 
 	api.hub.teacherClients[usLogin][client] = struct{}{}
 	api.hub.clientTeacher[client] = usLogin
-
-	// curChats, err := api.store.GetAllUserChatIDs(usLogin)
-	// if err != nil {
-	// 	log.Println(e.StacktraceError(err))
-	// 	returnErrorJSON(w, e.ErrServerError500)
-	// 	return
-	// }
-	//curChats := []int32{1, 2, 3, 4, 5}
-	// for _, ch := range curChats {
-	// 	api.hub.chats[ch] = client
-	// 	api.hub.clientChats[client] = append(api.hub.clientChats[client], ch)
-	// }
 
 	log.Println("opened websocket")
 	go client.writePump()

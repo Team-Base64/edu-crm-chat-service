@@ -95,11 +95,6 @@ func (sm *ChatManager) StartChatTG(ch proto.BotChat_StartChatTGServer) error {
 			log.Println(e.StacktraceError(err))
 			return err
 		}
-
-		// if sm.hub.chats[mes.ChatID] != nil {
-		// 	sm.hub.SendToFront <- &mes
-		// 	log.Println("routing mes from tg bot to hub + added to broadcast: ", req)
-		// }
 		tLogin, err := sm.store.GetTeacherLoginByChatId(int(mes.ChatID))
 		if err != nil {
 			log.Println(e.StacktraceError(err))
@@ -174,10 +169,6 @@ func (sm *ChatManager) StartChatVK(ch proto.BotChat_StartChatVKServer) error {
 		}
 		mes.TeacherLogin = tLogin
 		sm.hub.SendToFront <- &mes
-		// if sm.hub.chats[mes.ChatID] != nil {
-		// 	sm.hub.SendToFront <- &mes
-		// 	log.Println("routing mes from tg bot to hub + added to broadcast: ", req)
-		// }
 	}
 }
 
@@ -285,10 +276,7 @@ func (sm *ChatManager) CreateChat(ctx context.Context, req *proto.CreateChatRequ
 		log.Println(e.StacktraceError(err))
 		return &proto.CreateChatResponse{InternalChatID: -1}, err
 	}
-	//log.Println(tLogin)
-	//sm.hub.clientChats[sm.hub.teachers[tLogin]] = append(sm.hub.clientChats[sm.hub.teachers[tLogin]], int32(chatId))
 	mes := model.MessageWebsocket{Text: "", ChatID: int32(chatId), Channel: "newchat", IsSavedToDB: false, TeacherLogin: tLogin, CreateTime: time.Now()}
-	//sm.hub.Broadcast <- &mes
 	sm.hub.SendToFront <- &mes
 	return &proto.CreateChatResponse{InternalChatID: int32(chatId)}, nil
 }
