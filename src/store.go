@@ -20,7 +20,9 @@ type StoreInterface interface {
 	GetTypeByChatID(chatID int) (string, error)
 	ValidateToken(tok string) (int, error)
 	CreateStudent(in *proto.CreateStudentRequest) (int, error)
-	CreateChat(in *proto.CreateChatRequest) (int, error)
+	GetTeacherLoginById(id int) (string, error)
+	GetTeacherLoginByChatId(id int) (string, error)
+	CreateChat(in *proto.CreateChatRequest) (int, int, error)
 	GetHomeworksByChatID(classID int) ([]*proto.HomeworkData, error)
 	CreateSolution(in *proto.SendSolutionRequest) error
 	GetAllUserChatIDs(teacherLogin string) ([]int32, error)
@@ -118,7 +120,31 @@ func (s *Store) CreateStudent(in *proto.CreateStudentRequest) (int, error) {
 	return studID, nil
 }
 
-func (s *Store) CreateChat(in *proto.CreateChatRequest) (int, error) {
+func (s *Store) GetTeacherLoginById(id int) (string, error) {
+	login := ""
+	row := s.db.QueryRow(
+		`SELECT login FROM teachers WHERE id = $1;`,
+		id,
+	)
+	if err := row.Scan(&login); err != nil {
+		return "", e.StacktraceError(err)
+	}
+	return login, nil
+}
+
+func (s *Store) GetTeacherLoginByChatId(id int) (string, error) {
+	teacherId := 0
+	row := s.db.QueryRow(
+		`SELECT teacherID FROM chats WHERE id = $1;`,
+		id,
+	)
+	if err := row.Scan(&teacherId); err != nil {
+		return "", e.StacktraceError(err)
+	}
+	return s.GetTeacherLoginById(teacherId)
+}
+
+func (s *Store) CreateChat(in *proto.CreateChatRequest) (int, int, error) {
 	var id int = -1
 	var teacherID int = -1
 	row := s.db.QueryRow(
@@ -126,7 +152,7 @@ func (s *Store) CreateChat(in *proto.CreateChatRequest) (int, error) {
 		in.ClassID,
 	)
 	if err := row.Scan(&teacherID); err != nil {
-		return -1, e.StacktraceError(err)
+		return -1, -1, e.StacktraceError(err)
 	}
 
 	err := s.db.QueryRow(
@@ -134,9 +160,9 @@ func (s *Store) CreateChat(in *proto.CreateChatRequest) (int, error) {
 		teacherID, in.StudentID, in.ClassID,
 	).Scan(&id)
 	if err != nil {
-		return -1, e.StacktraceError(err)
+		return -1, -1, e.StacktraceError(err)
 	}
-	return id, nil
+	return teacherID, id, nil
 }
 
 func (s *Store) GetHomeworksByChatID(classID int) ([]*proto.HomeworkData, error) {

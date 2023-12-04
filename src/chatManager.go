@@ -96,10 +96,17 @@ func (sm *ChatManager) StartChatTG(ch proto.BotChat_StartChatTGServer) error {
 			return err
 		}
 
-		if sm.hub.chats[mes.ChatID] != nil {
-			sm.hub.Broadcast <- &mes
-			log.Println("routing mes from tg bot to hub + added to broadcast: ", req)
+		// if sm.hub.chats[mes.ChatID] != nil {
+		// 	sm.hub.SendToFront <- &mes
+		// 	log.Println("routing mes from tg bot to hub + added to broadcast: ", req)
+		// }
+		tLogin, err := sm.store.GetTeacherLoginByChatId(int(mes.ChatID))
+		if err != nil {
+			log.Println(e.StacktraceError(err))
+			return err
 		}
+		mes.TeacherLogin = tLogin
+		sm.hub.SendToFront <- &mes
 	}
 }
 
@@ -160,10 +167,17 @@ func (sm *ChatManager) StartChatVK(ch proto.BotChat_StartChatVKServer) error {
 			return err
 		}
 
-		if sm.hub.chats[mes.ChatID] != nil {
-			sm.hub.Broadcast <- &mes
-			log.Println("routing mes from tg bot to hub + added to broadcast: ", req)
+		tLogin, err := sm.store.GetTeacherLoginByChatId(int(mes.ChatID))
+		if err != nil {
+			log.Println(e.StacktraceError(err))
+			return err
 		}
+		mes.TeacherLogin = tLogin
+		sm.hub.SendToFront <- &mes
+		// if sm.hub.chats[mes.ChatID] != nil {
+		// 	sm.hub.SendToFront <- &mes
+		// 	log.Println("routing mes from tg bot to hub + added to broadcast: ", req)
+		// }
 	}
 }
 
@@ -261,14 +275,21 @@ func (sm *ChatManager) CreateStudent(ctx context.Context, req *proto.CreateStude
 
 func (sm *ChatManager) CreateChat(ctx context.Context, req *proto.CreateChatRequest) (*proto.CreateChatResponse, error) {
 	log.Println("called CreateChat ")
-	id, err := sm.store.CreateChat(req)
+	teacherID, chatId, err := sm.store.CreateChat(req)
 	if err != nil {
 		log.Println(e.StacktraceError(err))
 		return &proto.CreateChatResponse{InternalChatID: -1}, err
 	}
-	mes := model.MessageWebsocket{Text: "", ChatID: -1, Channel: "newchat", IsSavedToDB: false}
-	sm.hub.Broadcast <- &mes
-	return &proto.CreateChatResponse{InternalChatID: int32(id)}, nil
+	tLogin, err := sm.store.GetTeacherLoginById(teacherID)
+	if err != nil {
+		log.Println(e.StacktraceError(err))
+		return &proto.CreateChatResponse{InternalChatID: -1}, err
+	}
+	//sm.hub.clientChats[sm.hub.teachers[tLogin]] = append(sm.hub.clientChats[sm.hub.teachers[tLogin]], int32(chatId))
+	mes := model.MessageWebsocket{Text: "", ChatID: int32(chatId), Channel: "newchat", IsSavedToDB: false, TeacherLogin: tLogin}
+	//sm.hub.Broadcast <- &mes
+	sm.hub.SendToFront <- &mes
+	return &proto.CreateChatResponse{InternalChatID: int32(chatId)}, nil
 }
 
 func (sm *ChatManager) GetHomeworks(ctx context.Context, req *proto.GetHomeworksRequest) (*proto.GetHomeworksResponse, error) {

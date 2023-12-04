@@ -26,6 +26,7 @@ type MessageWebsocket struct {
 	CreateTime     time.Time `json:"date,omitempty"`
 	IsSavedToDB    bool      `json:"-"`
 	SocialType     string    `json:"socialType"`
+	TeacherLogin   string    `json:"-"`
 }
 
 type CreateBroadcastMessage struct {
