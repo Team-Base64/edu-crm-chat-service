@@ -14,6 +14,7 @@ import (
 )
 
 type StoreInterface interface {
+	CheckSession(in string) (string, error)
 	AddMessage(in *m.CreateMessage) error
 	GetChatsByClassID(chatID int) (*[]int, error)
 	GetTypeByChatID(chatID int) (string, error)
@@ -22,6 +23,7 @@ type StoreInterface interface {
 	CreateChat(in *proto.CreateChatRequest) (int, error)
 	GetHomeworksByChatID(classID int) ([]*proto.HomeworkData, error)
 	CreateSolution(in *proto.SendSolutionRequest) error
+	GetAllUserChatIDs(teacherLogin string) ([]int32, error)
 }
 
 type Store struct {
@@ -32,6 +34,14 @@ func NewStore(db *sql.DB) StoreInterface {
 	return &Store{
 		db: db,
 	}
+}
+
+func (s *Store) CheckSession(in string) (string, error) {
+	teacherLogin := ""
+	if err := s.db.QueryRow(`SELECT teacherLogin FROM sessions WHERE id = $1;`, in).Scan(&teacherLogin); err != nil {
+		return "", e.StacktraceError(err)
+	}
+	return teacherLogin, nil
 }
 
 func (s *Store) AddMessage(in *m.CreateMessage) error {
@@ -164,4 +174,27 @@ func (s *Store) CreateSolution(in *proto.SendSolutionRequest) error {
 		return e.StacktraceError(err)
 	}
 	return nil
+}
+
+func (s *Store) GetAllUserChatIDs(teacherLogin string) ([]int32, error) {
+	var teacherID int = -1
+	tIDs := []int32{}
+	row := s.db.QueryRow(`SELECT id FROM teachers WHERE login = $1;`, teacherLogin)
+	if err := row.Scan(&teacherID); err != nil {
+		return []int32{}, e.StacktraceError(err)
+	}
+
+	rows, err := s.db.Query(`SELECT id FROM chats WHERE teacherID = $1;`, teacherID)
+	if err != nil {
+		return []int32{}, e.StacktraceError(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var tmp int32 = 0
+		if err := rows.Scan(&tmp); err != nil {
+			return []int32{}, e.StacktraceError(err)
+		}
+		tIDs = append(tIDs, tmp)
+	}
+	return tIDs, nil
 }

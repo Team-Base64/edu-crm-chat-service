@@ -28,7 +28,7 @@ type Handler struct {
 	hub   *Hub
 }
 
-func NewHandler(store StoreInterface, hub *Hub, fs string, pf string) *Handler {
+func NewHandler(store StoreInterface, hub *Hub) *Handler {
 	return &Handler{
 		store: store,
 		hub:   hub,

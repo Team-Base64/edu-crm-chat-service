@@ -7,6 +7,7 @@ import (
 	"time"
 
 	e "main/domain/errors"
+	"main/domain/model"
 	m "main/domain/model"
 
 	"github.com/gorilla/websocket"
@@ -35,6 +36,12 @@ type Client struct {
 	hub  *Hub
 	conn *websocket.Conn
 	send chan *m.MessageWebsocket
+}
+
+func returnErrorJSON(w http.ResponseWriter, err error) {
+	errCode, errText := e.CheckError(err)
+	w.WriteHeader(errCode)
+	json.NewEncoder(w).Encode(&model.Error{Error: errText})
 }
 
 func (c *Client) readPump() {
@@ -120,20 +127,47 @@ func (c *Client) writePump() {
 	}
 }
 
-func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
+func (api *Handler) ServeWs(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(e.StacktraceError(err))
 		return
 	}
-	client := &Client{hub: hub, conn: conn, send: make(chan *m.MessageWebsocket)}
+
+	// session, err := r.Cookie("session_id")
+	// if err == http.ErrNoCookie {
+	// 	log.Println(e.StacktraceError(err))
+	// 	returnErrorJSON(w, e.ErrUnauthorized401)
+	// 	return
+	// }
+	// usLogin, err := api.store.CheckSession(session.Value)
+	// if errors.Is(err, sql.ErrNoRows) {
+	// 	log.Println(e.StacktraceError(err, errors.New("no sess: ")))
+	// 	returnErrorJSON(w, e.ErrUnauthorized401)
+	// 	return
+	// }
+	// if err != nil {
+	// 	log.Println(e.StacktraceError(err))
+	// 	returnErrorJSON(w, e.ErrServerError500)
+	// 	return
+	// }
+
+	client := &Client{hub: api.hub, conn: conn, send: make(chan *m.MessageWebsocket)}
 	client.hub.register <- client
-	//chats:= GetAllUserChats
-	curChats := []int32{1, 2}
+
+	//usLogin := r.URL.Query().Get("teacherLogin")
+	// curChats, err := api.store.GetAllUserChatIDs(usLogin)
+	// if err != nil {
+	// 	log.Println(e.StacktraceError(err))
+	// 	returnErrorJSON(w, e.ErrServerError500)
+	// 	return
+	// }
+	curChats := []int32{1, 2, 3, 4, 5}
 	for _, ch := range curChats {
-		hub.chats[ch] = client
-		hub.clientChats[client] = append(hub.clientChats[client], ch)
+		api.hub.chats[ch] = client
+		api.hub.clientChats[client] = append(api.hub.clientChats[client], ch)
 	}
+
 	log.Println("opened websocket")
 	go client.writePump()
 	go client.readPump()
