@@ -23,6 +23,7 @@ type StoreInterface interface {
 	GetTeacherLoginById(id int) (string, error)
 	GetTeacherLoginByChatId(id int) (string, error)
 	CreateChat(in *proto.CreateChatRequest) (int, int, error)
+	GetTeacherLoginByHomeworkId(hwid int) (string, error)
 	GetHomeworksByChatID(classID int) ([]*proto.HomeworkData, error)
 	CreateSolution(in *proto.SendSolutionRequest) error
 	GetAllUserChatIDs(teacherLogin string) ([]int32, error)
@@ -163,6 +164,26 @@ func (s *Store) CreateChat(in *proto.CreateChatRequest) (int, int, error) {
 		return -1, -1, e.StacktraceError(err)
 	}
 	return teacherID, id, nil
+}
+
+func (s *Store) GetTeacherLoginByHomeworkId(hwid int) (string, error) {
+	classId := 0
+	row := s.db.QueryRow(
+		`SELECT classID FROM homeworks WHERE id = $1;`,
+		hwid,
+	)
+	if err := row.Scan(&classId); err != nil {
+		return "", e.StacktraceError(err)
+	}
+	tId := 0
+	row = s.db.QueryRow(
+		`SELECT teacherID FROM classes WHERE id = $1;`,
+		classId,
+	)
+	if err := row.Scan(&tId); err != nil {
+		return "", e.StacktraceError(err)
+	}
+	return s.GetTeacherLoginById(tId)
 }
 
 func (s *Store) GetHomeworksByChatID(classID int) ([]*proto.HomeworkData, error) {
