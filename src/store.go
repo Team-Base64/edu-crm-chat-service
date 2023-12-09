@@ -111,8 +111,8 @@ func (s *Store) ValidateToken(tok string) (int, error) {
 func (s *Store) CreateStudent(in *proto.CreateStudentRequest) (int, error) {
 	var studID int = -1
 	err := s.db.QueryRow(
-		`INSERT INTO students (name, socialType) VALUES ($1, $2) RETURNING id;`,
-		in.Name, in.Type,
+		`INSERT INTO students (name, socialType, avatar) VALUES ($1, $2, $3) RETURNING id;`,
+		in.Name, in.Type, in.AvatarURL,
 	).Scan(&studID)
 	if err != nil {
 		return -1, e.StacktraceError(err)
