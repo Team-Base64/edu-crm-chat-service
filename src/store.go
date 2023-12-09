@@ -129,10 +129,39 @@ func (s *Store) CreateChat(in *proto.CreateChatRequest) (int, error) {
 	return id, nil
 }
 
+func (s *Store) GetTasksByHomeworkID(homeworkID int) ([]*proto.TaskData, error) {
+	rows, err := s.db.Query(
+		`SELECT t.description, t.attaches
+		 FROM tasks t
+		 JOIN homeworks_tasks ht ON t.id = ht.taskID
+		 WHERE ht.homeworkID = $1
+		 ORDER BY ht.rank;`,
+		homeworkID,
+	)
+	if err != nil {
+		return nil, e.StacktraceError(err)
+	}
+	defer rows.Close()
+
+	tasks := []*proto.TaskData{}
+	for rows.Next() {
+		var task proto.TaskData
+		err := rows.Scan(&task.Description, (*pq.StringArray)(&task.AttachmentURLs))
+		if err != nil {
+			return nil, e.StacktraceError(err)
+		}
+
+		tasks = append(tasks, &task)
+	}
+
+	return tasks, nil
+}
+
 func (s *Store) GetHomeworksByChatID(classID int) ([]*proto.HomeworkData, error) {
 	hws := []*proto.HomeworkData{}
 	rows, err := s.db.Query(
-		`SELECT id, title, description FROM homeworks WHERE classID = $1;`,
+		`SELECT id, title, description
+		 FROM homeworks WHERE classID = $1;`,
 		classID,
 	)
 	if err != nil {
@@ -140,12 +169,14 @@ func (s *Store) GetHomeworksByChatID(classID int) ([]*proto.HomeworkData, error)
 	}
 	defer rows.Close()
 	for rows.Next() {
-		tmp := proto.HomeworkData{AttachmentURLs: []string{}}
-		//tmpFileString := ""
+		tmp := proto.HomeworkData{}
 		if err := rows.Scan(&tmp.HomeworkID, &tmp.Title, &tmp.Description); err != nil {
 			return nil, e.StacktraceError(err)
 		}
-		//tmp.AttachmentURLs = append(tmp.AttachmentURLs, tmpFileString)
+		tmp.Tasks, err = s.GetTasksByHomeworkID(int(tmp.GetHomeworkID()))
+		if err != nil {
+			return nil, e.StacktraceError(err)
+		}
 		hws = append(hws, &tmp)
 	}
 	return hws, nil
