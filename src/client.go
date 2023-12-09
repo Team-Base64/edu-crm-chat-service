@@ -147,8 +147,8 @@ func (api *Handler) ServeWs(w http.ResponseWriter, r *http.Request) {
 	// 	return
 	// }
 
-	//usLogin := r.URL.Query().Get("teacherLogin")
-	usLogin := "test1"
+	usLogin := r.URL.Query().Get("teacherLogin")
+	//usLogin := "test1"
 	client := &Client{hub: api.hub, conn: conn, send: make(chan *m.MessageWebsocket)}
 	client.hub.register <- client
 
