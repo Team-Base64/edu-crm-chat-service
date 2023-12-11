@@ -4,6 +4,7 @@ import (
 	"time"
 
 	e "main/domain/errors"
+	"main/domain/model"
 	m "main/domain/model"
 	proto "main/src/proto"
 
@@ -16,7 +17,7 @@ import (
 type StoreInterface interface {
 	CheckSession(in string) (string, error)
 	AddMessage(in *m.CreateMessage) error
-	GetChatsByClassID(chatID int) (*[]int, error)
+	GetChatsByClassID(classID int) (*[]int, error)
 	GetTypeByChatID(chatID int) (string, error)
 	ValidateToken(tok string) (int, error)
 	CreateStudent(in *proto.CreateStudentRequest) (int, error)
@@ -27,6 +28,9 @@ type StoreInterface interface {
 	GetHomeworksByChatID(classID int) ([]*proto.HomeworkData, error)
 	CreateSolution(in *proto.SendSolutionRequest) error
 	GetAllUserChatIDs(teacherLogin string) ([]int32, error)
+
+	GetTeacherIDByClassID(classID int) (int, error)
+	GetCalendarDB(teacherID int) (*model.CalendarParams, error)
 }
 
 type Store struct {
@@ -60,10 +64,10 @@ func (s *Store) AddMessage(in *m.CreateMessage) error {
 	return nil
 }
 
-func (s *Store) GetChatsByClassID(chatID int) (*[]int, error) {
+func (s *Store) GetChatsByClassID(classID int) (*[]int, error) {
 	rows, err := s.db.Query(
 		`SELECT id FROM chats WHERE classID =  $1;`,
-		chatID,
+		classID,
 	)
 	if err != nil {
 		return nil, e.StacktraceError(err)
@@ -275,4 +279,22 @@ func (s *Store) GetAllUserChatIDs(teacherLogin string) ([]int32, error) {
 		tIDs = append(tIDs, tmp)
 	}
 	return tIDs, nil
+}
+
+func (s *Store) GetTeacherIDByClassID(classID int) (int, error) {
+	tID := 0
+	row := s.db.QueryRow(`SELECT teacherID FROM classes WHERE id = $1;`, classID)
+	if err := row.Scan(&tID); err != nil {
+		return -1, e.StacktraceError(err)
+	}
+	return tID, nil
+}
+
+func (s *Store) GetCalendarDB(teacherID int) (*model.CalendarParams, error) {
+	ans := model.CalendarParams{}
+	row := s.db.QueryRow(`SELECT id, idInGoogle FROM calendars WHERE teacherID = $1;`, teacherID)
+	if err := row.Scan(&ans.ID, &ans.IDInGoogle); err != nil {
+		return nil, e.StacktraceError(err)
+	}
+	return &ans, nil
 }

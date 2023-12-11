@@ -33,3 +33,17 @@ type CreateBroadcastMessage struct {
 	ChatID int32  `json:"chatid"`
 	Type   string `json:"type"`
 }
+
+type CalendarParams struct {
+	ID         int    `json:"id"`
+	IDInGoogle string `json:"googleid"`
+}
+
+type CalendarEvent struct {
+	Title       string    `json:"title"`
+	Description string    `json:"description,omitempty"`
+	StartDate   time.Time `json:"startDate"`
+	EndDate     time.Time `json:"endDate"`
+	ClassID     int       `json:"classid"`
+	ID          string    `json:"id,omitempty"`
+}

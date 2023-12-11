@@ -24,14 +24,18 @@ type ChatManager struct {
 	hub             *Hub
 	filestoragePath string
 	urlDomain       string
+	tokenFile       string
+	credentialsFile string
 }
 
-func NewChatManager(store StoreInterface, hub *Hub, fp string, ud string) *ChatManager {
+func NewChatManager(store StoreInterface, hub *Hub, fp string, ud string, tok string, cred string) *ChatManager {
 	return &ChatManager{
 		store:           store,
 		hub:             hub,
 		filestoragePath: fp,
 		urlDomain:       ud,
+		tokenFile:       tok,
+		credentialsFile: cred,
 	}
 }
 
@@ -87,7 +91,7 @@ func (sm *ChatManager) StartChatTG(ch proto.BotChat_StartChatTGServer) error {
 			return err
 		}
 		log.Println("received mes from tg bot: ", req)
-		mes := model.MessageWebsocket{Text: req.Text, ChatID: req.ChatID, Channel: "chat", AttachmentURLs: req.AttachmentURLs, CreateTime: time.Now(), IsSavedToDB: true}
+		mes := model.MessageWebsocket{Text: req.Text, ChatID: req.ChatID, Channel: "chat", AttachmentURLs: req.AttachmentURLs, CreateTime: time.Now(), IsSavedToDB: true, SocialType: "tg"}
 
 		log.Println("writing mes to db: ", mes)
 		err = sm.store.AddMessage(&model.CreateMessage{Text: mes.Text, ChatID: int(mes.ChatID), IsAuthorTeacher: false, IsRead: false, AttachmentURLs: mes.AttachmentURLs})
@@ -153,7 +157,7 @@ func (sm *ChatManager) StartChatVK(ch proto.BotChat_StartChatVKServer) error {
 			return err
 		}
 		log.Println("received mes from vk bot: ", req)
-		mes := model.MessageWebsocket{Text: req.Text, ChatID: req.ChatID, Channel: "chat", AttachmentURLs: req.AttachmentURLs, CreateTime: time.Now(), IsSavedToDB: true}
+		mes := model.MessageWebsocket{Text: req.Text, ChatID: req.ChatID, Channel: "chat", AttachmentURLs: req.AttachmentURLs, CreateTime: time.Now(), IsSavedToDB: true, SocialType: "vk"}
 
 		log.Println("writing mes to db: ", mes)
 		err = sm.store.AddMessage(&model.CreateMessage{Text: mes.Text, ChatID: int(mes.ChatID), IsAuthorTeacher: false, IsRead: false, AttachmentURLs: mes.AttachmentURLs})
@@ -325,4 +329,20 @@ func (sm *ChatManager) SendNotification(ctx context.Context, req *proto.Message)
 	}
 
 	return &proto.Nothing{}, nil
+}
+
+func (sm *ChatManager) GetEvents(ctx context.Context, req *proto.GetEventsRequest) (*proto.GetEventsResponse, error) {
+	log.Println("called GetEvents from bots")
+	tID, err := sm.store.GetTeacherIDByClassID(int(req.ClassID))
+	if err != nil {
+		log.Println(e.StacktraceError(err), err)
+		return &proto.GetEventsResponse{}, err
+	}
+	events, err := sm.GetCalendarEvents(tID, int(req.ClassID))
+	if err != nil {
+		log.Println(e.StacktraceError(err), errors.New("classid: "+strconv.Itoa(int(req.ClassID))))
+		return &proto.GetEventsResponse{}, err
+	}
+
+	return events, nil
 }
