@@ -25,6 +25,8 @@ import (
 var urlDB string
 var filestoragePath string
 var urlDomain string
+var tokenFile string
+var credentialsFile string
 
 func loggingAndCORSHeadersMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -67,7 +69,6 @@ func init() {
 	// if !exist || len(urlDBs) == 0 {
 	// 	log.Fatalln("could not get database name from env")
 	// }
-
 	// urlDB = urlDBs
 
 	filestoragePath, exist = os.LookupEnv(conf.FilestoragePath)
@@ -78,6 +79,16 @@ func init() {
 	urlDomain, exist = os.LookupEnv(conf.UrlDomain)
 	if !exist || len(urlDomain) == 0 {
 		log.Fatalln("could not get url domain from env")
+	}
+
+	tokenFile, exist = os.LookupEnv(conf.TokenFile)
+	if !exist || len(tokenFile) == 0 {
+		log.Fatalln("could not get token file path from env")
+	}
+
+	credentialsFile, exist = os.LookupEnv(conf.CredentialsFile)
+	if !exist || len(credentialsFile) == 0 {
+		log.Fatalln("could not get credentials file path from env")
 	}
 
 }
@@ -127,6 +138,8 @@ func main() {
 			hub,
 			filestoragePath,
 			urlDomain,
+			tokenFile,
+			credentialsFile,
 		),
 	)
 	log.Println("starting grpc server at " + conf.PortGRPC)

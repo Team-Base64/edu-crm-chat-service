@@ -7,6 +7,8 @@ var PG_PORT = "POSTGRES_PORT"
 var PG_DB = "POSTGRES_DB"
 var FilestoragePath = "FILESTORAGE_PATH"
 var UrlDomain = "URL_DOMAIN"
+var TokenFile = "TOKEN_FILE"
+var CredentialsFile = "CREDENTIALS_FILE"
 
 var URL_DB = "URL_DB"
 
