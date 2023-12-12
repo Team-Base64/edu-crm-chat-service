@@ -221,7 +221,7 @@ func (s *Store) GetTasksByHomeworkID(homeworkID int) ([]*proto.TaskData, error) 
 func (s *Store) GetHomeworksByChatID(classID int) ([]*proto.HomeworkData, error) {
 	hws := []*proto.HomeworkData{}
 	rows, err := s.db.Query(
-		`SELECT id, title, description
+		`SELECT id, title, description, createTime, deadlineTime
 		 FROM homeworks WHERE classID = $1;`,
 		classID,
 	)
@@ -231,9 +231,17 @@ func (s *Store) GetHomeworksByChatID(classID int) ([]*proto.HomeworkData, error)
 	defer rows.Close()
 	for rows.Next() {
 		tmp := proto.HomeworkData{}
-		if err := rows.Scan(&tmp.HomeworkID, &tmp.Title, &tmp.Description); err != nil {
+		var createTime, deadlineTime time.Time
+		if err := rows.Scan(
+			&tmp.HomeworkID, &tmp.Title, &tmp.Description,
+			&createTime, &deadlineTime,
+		); err != nil {
 			return nil, e.StacktraceError(err)
 		}
+
+		tmp.CreateDate = createTime.String()
+		tmp.DeadlineDate = deadlineTime.String()
+
 		tmp.Tasks, err = s.GetTasksByHomeworkID(int(tmp.GetHomeworkID()))
 		if err != nil {
 			return nil, e.StacktraceError(err)
