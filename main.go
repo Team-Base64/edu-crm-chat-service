@@ -19,6 +19,7 @@ import (
 	_ "main/docs"
 
 	httpSwagger "github.com/swaggo/http-swagger"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
 )
 
@@ -27,6 +28,7 @@ var filestoragePath string
 var urlDomain string
 var tokenFile string
 var credentialsFile string
+var calendarGrpcUrl string
 
 func loggingAndCORSHeadersMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -41,6 +43,11 @@ func loggingAndCORSHeadersMiddleware(next http.Handler) http.Handler {
 
 func init() {
 	var exist bool
+
+	calendarGrpcUrl, exist = os.LookupEnv(conf.CalendarGrpcUrl)
+	if !exist || len(calendarGrpcUrl) == 0 {
+		log.Fatalln("could not get calendar grpc url from env")
+	}
 
 	pgUser, exist := os.LookupEnv(conf.PG_USER)
 	if !exist || len(pgUser) == 0 {
@@ -116,9 +123,19 @@ func main() {
 	Handler := src.NewHandler(Store, hub)
 
 	myRouter.HandleFunc(conf.PathWS, Handler.ServeWs).Methods(http.MethodGet, http.MethodOptions)
-	//myRouter.HandleFunc(conf.PathWS, func(w http.ResponseWriter, r *http.Request) { src.ServeWs(hub, w, r) })
+
 	myRouter.PathPrefix(conf.PathDocs).Handler(httpSwagger.WrapHandler)
 	myRouter.Use(loggingAndCORSHeadersMiddleware)
+
+	grcpConnCalendar, err := grpc.Dial(
+		calendarGrpcUrl,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		log.Fatalln("cant create connecter to grpc calendar")
+	}
+	log.Println("connecter to grpc calendar service is created")
+	defer grcpConnCalendar.Close()
 
 	lis, err := net.Listen("tcp", conf.PortGRPC)
 	if err != nil {
@@ -141,6 +158,7 @@ func main() {
 			urlDomain,
 			tokenFile,
 			credentialsFile,
+			proto.NewCalendarControllerClient(grcpConnCalendar),
 		),
 	)
 	log.Println("starting grpc server at " + conf.PortGRPC)

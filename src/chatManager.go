@@ -26,9 +26,10 @@ type ChatManager struct {
 	urlDomain       string
 	tokenFile       string
 	credentialsFile string
+	calendarClient  proto.CalendarControllerClient
 }
 
-func NewChatManager(store StoreInterface, hub *Hub, fp string, ud string, tok string, cred string) *ChatManager {
+func NewChatManager(store StoreInterface, hub *Hub, fp string, ud string, tok string, cred string, cal proto.CalendarControllerClient) *ChatManager {
 	return &ChatManager{
 		store:           store,
 		hub:             hub,
@@ -36,7 +37,26 @@ func NewChatManager(store StoreInterface, hub *Hub, fp string, ud string, tok st
 		urlDomain:       ud,
 		tokenFile:       tok,
 		credentialsFile: cred,
+		calendarClient:  cal,
 	}
+}
+
+func (sm *ChatManager) GetEvents(ctx context.Context, req *proto.GetEventsRequest) (*proto.GetEventsResponse, error) {
+	log.Println("called GetEvents from bots")
+	tID, err := sm.store.GetTeacherIDByClassID(int(req.ClassID))
+	if err != nil {
+		log.Println(e.StacktraceError(err), err)
+		return &proto.GetEventsResponse{}, err
+	}
+	//events, err := sm.GetCalendarEvents(tID, int(req.ClassID))
+	//events, err := sm.calendar.GetEvents(ctx, &proto.GetEventsRequestCalendar{TeacherID: int32(tID)})
+	events, err := sm.calendarClient.GetEventsCalendar(context.Background(), &proto.GetEventsRequestCalendar{TeacherID: int32(tID)})
+	if err != nil {
+		log.Println(e.StacktraceError(err), errors.New("classid: "+strconv.Itoa(int(req.ClassID))))
+		return &proto.GetEventsResponse{}, err
+	}
+
+	return events, nil
 }
 
 func (sm *ChatManager) StartChatTG(ch proto.BotChat_StartChatTGServer) error {
@@ -329,20 +349,4 @@ func (sm *ChatManager) SendNotification(ctx context.Context, req *proto.Message)
 	}
 
 	return &proto.Nothing{}, nil
-}
-
-func (sm *ChatManager) GetEvents(ctx context.Context, req *proto.GetEventsRequest) (*proto.GetEventsResponse, error) {
-	log.Println("called GetEvents from bots")
-	tID, err := sm.store.GetTeacherIDByClassID(int(req.ClassID))
-	if err != nil {
-		log.Println(e.StacktraceError(err), err)
-		return &proto.GetEventsResponse{}, err
-	}
-	events, err := sm.GetCalendarEvents(tID, int(req.ClassID))
-	if err != nil {
-		log.Println(e.StacktraceError(err), errors.New("classid: "+strconv.Itoa(int(req.ClassID))))
-		return &proto.GetEventsResponse{}, err
-	}
-
-	return events, nil
 }
