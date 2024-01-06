@@ -2,7 +2,7 @@ syntax = "proto3";
 
 // export PATH="$PATH:$(go env GOPATH)/bin"
 // go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
-// protoc --go_out=. --go-grpc_out=. --go-grpc_opt=paths=source_relative --go_opt=paths=source_relative src/proto/chat.proto
+// protoc --go_out=. --go-grpc_out=. --go-grpc_opt=paths=source_relative --go_opt=paths=source_relative delivery/grpc/proto/chat.proto
 
 package chat;
 option go_package = "./chat";
@@ -55,8 +55,6 @@ message SendSolutionRequest {
     int32 studentID = 3;
 }
 
-message SendSolutionResponse { }
-
 message ValidateTokenRequest {
     string token = 1;
 }
@@ -102,6 +100,7 @@ message EventData {
     string description = 3;
     string startDate = 4;
     string endDate = 5;
+    int32 classID = 6;
 }
 
 message GetEventsRequest {
@@ -128,7 +127,7 @@ service BotChat {
     rpc CreateChat (CreateChatRequest) returns (CreateChatResponse);
     rpc GetHomeworks (GetHomeworksRequest) returns (GetHomeworksResponse);
     rpc CreateStudent(CreateStudentRequest) returns (CreateStudentResponse);
-    rpc SendSolution (SendSolutionRequest) returns (SendSolutionResponse);
+    rpc SendSolution (SendSolutionRequest) returns (Nothing);
     rpc GetEvents(GetEventsRequest) returns (GetEventsResponse);
 }
 

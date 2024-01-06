@@ -1,12 +1,9 @@
-package chat
+package pg
 
 import (
-	"time"
-
 	e "main/domain/errors"
-	"main/domain/model"
 	m "main/domain/model"
-	proto "main/src/proto"
+	rep "main/repository"
 
 	"database/sql"
 
@@ -14,30 +11,11 @@ import (
 	"github.com/lib/pq"
 )
 
-type StoreInterface interface {
-	CheckSession(in string) (string, error)
-	AddMessage(in *m.CreateMessage) error
-	GetChatsByClassID(classID int) (*[]int, error)
-	GetTypeByChatID(chatID int) (string, error)
-	ValidateToken(tok string) (int, error)
-	CreateStudent(in *proto.CreateStudentRequest) (int, error)
-	GetTeacherLoginById(id int) (string, error)
-	GetTeacherLoginByChatId(id int) (string, error)
-	CreateChat(in *proto.CreateChatRequest) (int, int, error)
-	GetTeacherLoginByHomeworkId(hwid int) (string, error)
-	GetHomeworksByChatID(classID int) ([]*proto.HomeworkData, error)
-	CreateSolution(in *proto.SendSolutionRequest) error
-	GetAllUserChatIDs(teacherLogin string) ([]int32, error)
-
-	GetTeacherIDByClassID(classID int) (int, error)
-	GetCalendarDB(teacherID int) (*model.CalendarParams, error)
-}
-
 type Store struct {
 	db *sql.DB
 }
 
-func NewStore(db *sql.DB) StoreInterface {
+func NewStore(db *sql.DB) rep.StoreInterface {
 	return &Store{
 		db: db,
 	}
@@ -51,20 +29,16 @@ func (s *Store) CheckSession(in string) (string, error) {
 	return teacherLogin, nil
 }
 
-func (s *Store) AddMessage(in *m.CreateMessage) error {
-	modelAtt := []string{}
-	if in.AttachmentURLs != nil {
-		modelAtt = in.AttachmentURLs
-	}
+func (s *Store) AddMessage(msg *m.CreateMessage) error {
 	_, err := s.db.Exec(`INSERT INTO messages (chatID, text, isAuthorTeacher, createtime, isRead, attaches) VALUES ($1, $2, $3, $4, $5, $6);`,
-		in.ChatID, in.Text, in.IsAuthorTeacher, time.Now().Format("2006.01.02 15:04:05"), in.IsRead, (*pq.StringArray)(&modelAtt))
+		msg.ChatID, msg.Text, msg.IsAuthorTeacher, msg.CreateTime, msg.IsRead, (*pq.StringArray)(&msg.AttachmentURLs))
 	if err != nil {
 		return e.StacktraceError(err)
 	}
 	return nil
 }
 
-func (s *Store) GetChatsByClassID(classID int) (*[]int, error) {
+func (s *Store) GetChatsByClassID(classID int) ([]int, error) {
 	rows, err := s.db.Query(
 		`SELECT id FROM chats WHERE classID =  $1;`,
 		classID,
@@ -83,7 +57,7 @@ func (s *Store) GetChatsByClassID(classID int) (*[]int, error) {
 
 		ans = append(ans, id)
 	}
-	return &ans, nil
+	return ans, nil
 }
 
 func (s *Store) GetTypeByChatID(chatID int) (string, error) {
@@ -112,11 +86,11 @@ func (s *Store) ValidateToken(tok string) (int, error) {
 	return classID, nil
 }
 
-func (s *Store) CreateStudent(in *proto.CreateStudentRequest) (int, error) {
+func (s *Store) CreateStudent(student *m.Student) (int, error) {
 	var studID int = -1
 	err := s.db.QueryRow(
 		`INSERT INTO students (name, socialType, avatar) VALUES ($1, $2, $3) RETURNING id;`,
-		in.Name, in.Type, in.AvatarURL,
+		student.Name, student.Type, student.AvatarURL,
 	).Scan(&studID)
 	if err != nil {
 		return -1, e.StacktraceError(err)
@@ -149,12 +123,12 @@ func (s *Store) GetTeacherLoginByChatId(id int) (string, error) {
 	return s.GetTeacherLoginById(teacherId)
 }
 
-func (s *Store) CreateChat(in *proto.CreateChatRequest) (int, int, error) {
-	var id int = -1
+func (s *Store) CreateChat(chat *m.Chat) (int, int, error) {
+	var chatID int = -1
 	var teacherID int = -1
 	row := s.db.QueryRow(
 		`SELECT teacherID FROM classes WHERE id = $1;`,
-		in.ClassID,
+		chat.ClassID,
 	)
 	if err := row.Scan(&teacherID); err != nil {
 		return -1, -1, e.StacktraceError(err)
@@ -162,12 +136,12 @@ func (s *Store) CreateChat(in *proto.CreateChatRequest) (int, int, error) {
 
 	err := s.db.QueryRow(
 		`INSERT INTO chats (teacherID, studentID, classID) VALUES ($1, $2, $3) RETURNING id;`,
-		teacherID, in.StudentID, in.ClassID,
-	).Scan(&id)
+		teacherID, chat.StudentID, chat.ClassID,
+	).Scan(&chatID)
 	if err != nil {
 		return -1, -1, e.StacktraceError(err)
 	}
-	return teacherID, id, nil
+	return teacherID, chatID, nil
 }
 
 func (s *Store) GetTeacherLoginByHomeworkId(hwid int) (string, error) {
@@ -190,7 +164,7 @@ func (s *Store) GetTeacherLoginByHomeworkId(hwid int) (string, error) {
 	return s.GetTeacherLoginById(tId)
 }
 
-func (s *Store) GetTasksByHomeworkID(homeworkID int) ([]*proto.TaskData, error) {
+func (s *Store) GetTasksByHomeworkID(homeworkID int) ([]m.Task, error) {
 	rows, err := s.db.Query(
 		`SELECT t.description, t.attaches
 		 FROM tasks t
@@ -204,22 +178,22 @@ func (s *Store) GetTasksByHomeworkID(homeworkID int) ([]*proto.TaskData, error) 
 	}
 	defer rows.Close()
 
-	tasks := []*proto.TaskData{}
+	tasks := []m.Task{}
 	for rows.Next() {
-		var task proto.TaskData
+		var task m.Task
 		err := rows.Scan(&task.Description, (*pq.StringArray)(&task.AttachmentURLs))
 		if err != nil {
 			return nil, e.StacktraceError(err)
 		}
 
-		tasks = append(tasks, &task)
+		tasks = append(tasks, task)
 	}
 
 	return tasks, nil
 }
 
-func (s *Store) GetHomeworksByChatID(classID int) ([]*proto.HomeworkData, error) {
-	hws := []*proto.HomeworkData{}
+func (s *Store) GetHomeworksByChatID(classID int) ([]m.Homework, error) {
+	hws := []m.Homework{}
 	rows, err := s.db.Query(
 		`SELECT id, title, description, createTime, deadlineTime
 		 FROM homeworks WHERE classID = $1;`,
@@ -230,35 +204,27 @@ func (s *Store) GetHomeworksByChatID(classID int) ([]*proto.HomeworkData, error)
 	}
 	defer rows.Close()
 	for rows.Next() {
-		tmp := proto.HomeworkData{}
-		var createTime, deadlineTime time.Time
+		tmp := m.Homework{}
 		if err := rows.Scan(
 			&tmp.HomeworkID, &tmp.Title, &tmp.Description,
-			&createTime, &deadlineTime,
+			&tmp.CreateDate, &tmp.DeadlineDate,
 		); err != nil {
 			return nil, e.StacktraceError(err)
 		}
 
-		tmp.CreateDate = createTime.String()
-		tmp.DeadlineDate = deadlineTime.String()
-
-		tmp.Tasks, err = s.GetTasksByHomeworkID(int(tmp.GetHomeworkID()))
+		tmp.Tasks, err = s.GetTasksByHomeworkID(tmp.HomeworkID)
 		if err != nil {
 			return nil, e.StacktraceError(err)
 		}
-		hws = append(hws, &tmp)
+		hws = append(hws, tmp)
 	}
 	return hws, nil
 }
 
-func (s *Store) CreateSolution(in *proto.SendSolutionRequest) error {
-	tmpAttach := []string{}
-	if in.Solution.AttachmentURLs != nil {
-		tmpAttach = in.Solution.AttachmentURLs
-	}
+func (s *Store) CreateSolution(sol *m.Solution) error {
 	_, err := s.db.Exec(
 		`INSERT INTO solutions (homeworkID, studentID, text, createTime, files) VALUES ($1, $2, $3, $4, $5);`,
-		in.HomeworkID, in.StudentID, in.Solution.Text, time.Now().Format("2006.01.02 15:04:05"), (*pq.StringArray)(&tmpAttach),
+		sol.HomeworkID, sol.StudentID, sol.Text, sol.CreateDate, (*pq.StringArray)(&sol.AttachmentURLs),
 	)
 	if err != nil {
 		return e.StacktraceError(err)
@@ -296,13 +262,4 @@ func (s *Store) GetTeacherIDByClassID(classID int) (int, error) {
 		return -1, e.StacktraceError(err)
 	}
 	return tID, nil
-}
-
-func (s *Store) GetCalendarDB(teacherID int) (*model.CalendarParams, error) {
-	ans := model.CalendarParams{}
-	row := s.db.QueryRow(`SELECT id, idInGoogle FROM calendars WHERE teacherID = $1;`, teacherID)
-	if err := row.Scan(&ans.ID, &ans.IDInGoogle); err != nil {
-		return nil, e.StacktraceError(err)
-	}
-	return &ans, nil
 }
