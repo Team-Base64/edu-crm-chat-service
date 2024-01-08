@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+// export PATH="$PATH:$(go env GOPATH)/bin"
+// go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+// protoc --go_out=. --go-grpc_out=. --go-grpc_opt=paths=source_relative --go_opt=paths=source_relative delivery/grpc/calendar/proto/calendar.proto
+
+package calendar;
+option go_package = "./calendar";
+
+message EventData {
+    string id = 1;
+    string title = 2;
+    string description = 3;
+    string startDate = 4;
+    string endDate = 5;
+    int32 classID = 6;
+}
+
+message GetEventsRequestCalendar {
+    int32 teacherID = 1;
+}
+
+message GetEventsResponse {
+    repeated EventData events = 1;
+}
+
+service CalendarController {
+    rpc GetEventsCalendar(GetEventsRequestCalendar) returns (GetEventsResponse);
+}

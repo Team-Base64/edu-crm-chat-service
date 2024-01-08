@@ -9,8 +9,13 @@ import (
 	"time"
 
 	conf "main/config"
-	src "main/src"
-	proto "main/src/proto"
+	grpcCalendar "main/delivery/grpc/calendar"
+	protoCalendar "main/delivery/grpc/calendar/proto"
+	grpcChat "main/delivery/grpc/chat"
+	protoChat "main/delivery/grpc/chat/proto"
+	ws "main/delivery/ws"
+	pgstore "main/repository/pg"
+	chatusecase "main/usecase/chat"
 
 	"github.com/gorilla/mux"
 
@@ -115,14 +120,10 @@ func main() {
 	}
 	log.Println("database is reachable")
 
-	hub := src.NewHub()
+	hub := ws.NewHub()
 	go hub.Run()
 
-	Store := src.NewStore(db)
-
-	Handler := src.NewHandler(Store, hub)
-
-	myRouter.HandleFunc(conf.PathWS, Handler.ServeWs).Methods(http.MethodGet, http.MethodOptions)
+	myRouter.HandleFunc(conf.PathWS, hub.AddConnection).Methods(http.MethodGet, http.MethodOptions)
 
 	myRouter.PathPrefix(conf.PathDocs).Handler(httpSwagger.WrapHandler)
 	myRouter.Use(loggingAndCORSHeadersMiddleware)
@@ -149,18 +150,14 @@ func main() {
 			Timeout: 5 * time.Second,
 		}),
 	)
-	proto.RegisterBotChatServer(
-		server,
-		src.NewChatManager(
-			Store,
-			hub,
-			filestoragePath,
-			urlDomain,
-			tokenFile,
-			credentialsFile,
-			proto.NewCalendarControllerClient(grcpConnCalendar),
-		),
-	)
+
+	store := pgstore.NewStore(db)
+	calendar := grpcCalendar.NewCalendarService(protoCalendar.NewCalendarControllerClient(grcpConnCalendar))
+	usecase := chatusecase.NewChatUsecase(hub, store, calendar, filestoragePath, urlDomain)
+
+	grpcHandler := grpcChat.NewChatGrpcHander(usecase)
+	protoChat.RegisterBotChatServer(server, grpcHandler)
+
 	log.Println("starting grpc server at " + conf.PortGRPC)
 	go server.Serve(lis)
 

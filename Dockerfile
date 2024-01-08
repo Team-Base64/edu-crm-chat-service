@@ -8,7 +8,7 @@ RUN go install github.com/swaggo/swag/cmd/swag@latest
 
 COPY ./ ./
 
-RUN swag init -g src/delivery.go
+RUN swag init -g delivery/ws/hub.go
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /chat-servis main.go
 

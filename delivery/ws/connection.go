@@ -1,13 +1,11 @@
-package chat
+package ws
 
 import (
 	"encoding/json"
 	"log"
-	"net/http"
 	"time"
 
 	e "main/domain/errors"
-	"main/domain/model"
 	m "main/domain/model"
 
 	"github.com/gorilla/websocket"
@@ -24,27 +22,13 @@ const (
 	maxMessageSize = 512
 )
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin: func(r *http.Request) bool {
-		return true
-	},
-}
-
-type Client struct {
+type ConnectionWS struct {
 	hub  *Hub
 	conn *websocket.Conn
 	send chan *m.MessageWebsocket
 }
 
-func returnErrorJSON(w http.ResponseWriter, err error) {
-	errCode, errText := e.CheckError(err)
-	w.WriteHeader(errCode)
-	json.NewEncoder(w).Encode(&model.Error{Error: errText})
-}
-
-func (c *Client) readPump() {
+func (c *ConnectionWS) readPump() {
 	defer func() {
 		c.hub.unregister <- c
 		c.conn.Close()
@@ -71,15 +55,15 @@ func (c *Client) readPump() {
 		req.IsSavedToDB = true
 		switch type1 := req.SocialType; type1 {
 		case "tg":
-			c.hub.MessagesToTGBot <- req
+			c.hub.msgToTG <- req
 		case "vk":
-			c.hub.MessagesToVKBot <- req
+			c.hub.msgToVK <- req
 		}
 
 	}
 }
 
-func (c *Client) writePump() {
+func (c *ConnectionWS) writePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
@@ -120,46 +104,4 @@ func (c *Client) writePump() {
 			}
 		}
 	}
-}
-
-func (api *Handler) ServeWs(w http.ResponseWriter, r *http.Request) {
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Println(e.StacktraceError(err))
-		return
-	}
-
-	// session, err := r.Cookie("session_id")
-	// if err == http.ErrNoCookie {
-	// 	log.Println(e.StacktraceError(err))
-	// 	returnErrorJSON(w, e.ErrUnauthorized401)
-	// 	return
-	// }
-	// usLogin, err := api.store.CheckSession(session.Value)
-	// if errors.Is(err, sql.ErrNoRows) {
-	// 	log.Println(e.StacktraceError(err, errors.New("no sess: ")))
-	// 	returnErrorJSON(w, e.ErrUnauthorized401)
-	// 	return
-	// }
-	// if err != nil {
-	// 	log.Println(e.StacktraceError(err))
-	// 	returnErrorJSON(w, e.ErrServerError500)
-	// 	return
-	// }
-
-	usLogin := r.URL.Query().Get("teacherLogin")
-	//usLogin := "test1"
-	client := &Client{hub: api.hub, conn: conn, send: make(chan *m.MessageWebsocket)}
-	client.hub.register <- client
-
-	if _, ok := api.hub.teacherClients[usLogin]; !ok {
-		api.hub.teacherClients[usLogin] = make(map[*Client]struct{})
-	}
-
-	api.hub.teacherClients[usLogin][client] = struct{}{}
-	api.hub.clientTeacher[client] = usLogin
-
-	log.Println("opened websocket")
-	go client.writePump()
-	go client.readPump()
 }
