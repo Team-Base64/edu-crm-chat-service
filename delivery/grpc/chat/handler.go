@@ -1,11 +1,11 @@
-package grpc
+package chat
 
 import (
 	"context"
 	"io"
 	"log"
 
-	proto "main/delivery/grpc/proto"
+	proto "main/delivery/grpc/chat/proto"
 	e "main/domain/errors"
 	m "main/domain/model"
 	u "main/usecase"

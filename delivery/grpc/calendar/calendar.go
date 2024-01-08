@@ -1,9 +1,9 @@
-package grpc
+package calendar
 
 import (
 	"context"
 	d "main/delivery"
-	proto "main/delivery/grpc/proto"
+	proto "main/delivery/grpc/calendar/proto"
 	e "main/domain/errors"
 	m "main/domain/model"
 	"time"
@@ -13,9 +13,9 @@ type CalendarService struct {
 	client proto.CalendarControllerClient
 }
 
-func NewCalendarService(client proto.CalendarControllerClient) d.CalendarInterface {
+func NewCalendarService(c proto.CalendarControllerClient) d.CalendarInterface {
 	return &CalendarService{
-		client: client,
+		client: c,
 	}
 }
 

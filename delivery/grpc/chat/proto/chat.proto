@@ -107,9 +107,9 @@ message GetEventsRequest {
     int32 classID = 1;
 }
 
-message GetEventsRequestCalendar {
-    int32 teacherID = 1;
-}
+// message GetEventsRequestCalendar {
+//     int32 teacherID = 1;
+// }
 
 message GetEventsResponse {
     repeated EventData events = 1;
@@ -131,6 +131,6 @@ service BotChat {
     rpc GetEvents(GetEventsRequest) returns (GetEventsResponse);
 }
 
-service CalendarController {
-    rpc GetEventsCalendar(GetEventsRequestCalendar) returns (GetEventsResponse);
-}
+// service CalendarController {
+//     rpc GetEventsCalendar(GetEventsRequestCalendar) returns (GetEventsResponse);
+// }

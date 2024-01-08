@@ -30,6 +30,10 @@ func (s *Store) CheckSession(in string) (string, error) {
 }
 
 func (s *Store) AddMessage(msg *m.CreateMessage) error {
+	if msg.AttachmentURLs == nil {
+		msg.AttachmentURLs = []string{}
+	}
+
 	_, err := s.db.Exec(`INSERT INTO messages (chatID, text, isAuthorTeacher, createtime, isRead, attaches) VALUES ($1, $2, $3, $4, $5, $6);`,
 		msg.ChatID, msg.Text, msg.IsAuthorTeacher, msg.CreateTime, msg.IsRead, (*pq.StringArray)(&msg.AttachmentURLs))
 	if err != nil {

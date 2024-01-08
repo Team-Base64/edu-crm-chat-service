@@ -10,6 +10,21 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// @title TCRA API
+// @version 1.0
+// @description EDUCRM back chat server.
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name API Support
+// @contact.url http://www.swagger.io/support
+// @contact.email support@swagger.io
+
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host 127.0.0.1:8081
+// @BasePath  /apichat
+
 type Hub struct {
 	clients        map[*ConnectionWS]bool
 	msgToClient    chan *m.MessageWebsocket
@@ -42,6 +57,14 @@ func NewHub() d.HubExtendedInterface {
 	}
 }
 
+// AddConnection godoc
+// @Summary Connect websocket
+// @Description Connect websocket
+// @ID addConnection
+// @Accept  json
+// @Produce  json
+// @Param teacherLogin query string true "teacherLogin"
+// @Router /ws [get]
 func (hub *Hub) AddConnection(w http.ResponseWriter, r *http.Request) {
 	conn, err := hub.upgrader.Upgrade(w, r, nil)
 	if err != nil {

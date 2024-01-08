@@ -9,8 +9,10 @@ import (
 	"time"
 
 	conf "main/config"
-	g "main/delivery/grpc"
-	proto "main/delivery/grpc/proto"
+	grpcCalendar "main/delivery/grpc/calendar"
+	protoCalendar "main/delivery/grpc/calendar/proto"
+	grpcChat "main/delivery/grpc/chat"
+	protoChat "main/delivery/grpc/chat/proto"
 	ws "main/delivery/ws"
 	pgstore "main/repository/pg"
 	chatusecase "main/usecase/chat"
@@ -143,11 +145,11 @@ func main() {
 	)
 
 	store := pgstore.NewStore(db)
-	calendar := g.NewCalendarService(proto.NewCalendarControllerClient(grcpConnCalendar))
+	calendar := grpcCalendar.NewCalendarService(protoCalendar.NewCalendarControllerClient(grcpConnCalendar))
 	usecase := chatusecase.NewChatUsecase(hub, store, calendar, filestoragePath, urlDomain)
 
-	grpcHandler := g.NewChatGrpcHander(usecase)
-	proto.RegisterBotChatServer(server, grpcHandler)
+	grpcHandler := grpcChat.NewChatGrpcHander(usecase)
+	protoChat.RegisterBotChatServer(server, grpcHandler)
 
 	log.Println("starting grpc server at " + conf.PortGRPC)
 	go server.Serve(lis)
