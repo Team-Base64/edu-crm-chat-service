@@ -9,25 +9,30 @@ import (
 	"time"
 
 	conf "main/config"
-	src "main/src"
-	proto "main/src/proto"
-
-	"github.com/gorilla/mux"
-
-	"google.golang.org/grpc"
+	grpcCalendar "main/delivery/grpc/calendar"
+	protoCalendar "main/delivery/grpc/calendar/proto"
+	grpcChat "main/delivery/grpc/chat"
+	protoChat "main/delivery/grpc/chat/proto"
+	ws "main/delivery/ws"
+	localStore "main/repository/local-storage"
+	pgstore "main/repository/pg"
+	chatusecase "main/usecase/chat"
 
 	_ "main/docs"
 
+	"github.com/gorilla/mux"
 	httpSwagger "github.com/swaggo/http-swagger"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
 )
 
 var urlDB string
 var filestoragePath string
+var chatFilesPath string
+var homeworkFilesPath string
+var solutionFilesPath string
 var urlDomain string
-var tokenFile string
-var credentialsFile string
 var calendarGrpcUrl string
 
 func loggingAndCORSHeadersMiddleware(next http.Handler) http.Handler {
@@ -44,7 +49,7 @@ func loggingAndCORSHeadersMiddleware(next http.Handler) http.Handler {
 func init() {
 	var exist bool
 
-	calendarGrpcUrl, exist = os.LookupEnv(conf.CalendarGrpcUrl)
+	calendarGrpcUrl, exist = os.LookupEnv(conf.CALENDAR_GRPC_URL)
 	if !exist || len(calendarGrpcUrl) == 0 {
 		log.Fatalln("could not get calendar grpc url from env")
 	}
@@ -72,33 +77,30 @@ func init() {
 
 	urlDB = "postgres://" + pgUser + ":" + pgPwd + "@" + pgHost + ":" + pgPort + "/" + pgDB
 
-	// urlDBs, exist := os.LookupEnv(conf.URL_DB)
-	// if !exist || len(urlDBs) == 0 {
-	// 	log.Fatalln("could not get database name from env")
-	// }
-
-	// urlDB = urlDBs
-
-	filestoragePath, exist = os.LookupEnv(conf.FilestoragePath)
+	filestoragePath, exist = os.LookupEnv(conf.FILESTORAGE_PATH)
 	if !exist || len(filestoragePath) == 0 {
 		log.Fatalln("could not get filestorage path from env")
 	}
 
-	urlDomain, exist = os.LookupEnv(conf.UrlDomain)
+	chatFilesPath, exist = os.LookupEnv(conf.CHAT_FILES_PATH)
+	if !exist || len(chatFilesPath) == 0 {
+		log.Fatalln("could not get chat files path from env")
+	}
+
+	homeworkFilesPath, exist = os.LookupEnv(conf.HOMEWORK_FILES_PATH)
+	if !exist || len(homeworkFilesPath) == 0 {
+		log.Fatalln("could not get homework files path from env")
+	}
+
+	solutionFilesPath, exist = os.LookupEnv(conf.SOLUTION_FILES_PATH)
+	if !exist || len(solutionFilesPath) == 0 {
+		log.Fatalln("could not get solution files path from env")
+	}
+
+	urlDomain, exist = os.LookupEnv(conf.URL_DOMAIN)
 	if !exist || len(urlDomain) == 0 {
 		log.Fatalln("could not get url domain from env")
 	}
-
-	tokenFile, exist = os.LookupEnv(conf.TokenFile)
-	if !exist || len(tokenFile) == 0 {
-		log.Fatalln("could not get token file path from env")
-	}
-
-	credentialsFile, exist = os.LookupEnv(conf.CredentialsFile)
-	if !exist || len(credentialsFile) == 0 {
-		log.Fatalln("could not get credentials file path from env")
-	}
-
 }
 
 func main() {
@@ -115,14 +117,10 @@ func main() {
 	}
 	log.Println("database is reachable")
 
-	hub := src.NewHub()
+	hub := ws.NewHub()
 	go hub.Run()
 
-	Store := src.NewStore(db)
-
-	Handler := src.NewHandler(Store, hub)
-
-	myRouter.HandleFunc(conf.PathWS, Handler.ServeWs).Methods(http.MethodGet, http.MethodOptions)
+	myRouter.HandleFunc(conf.PathWS, hub.AddConnection).Methods(http.MethodGet, http.MethodOptions)
 
 	myRouter.PathPrefix(conf.PathDocs).Handler(httpSwagger.WrapHandler)
 	myRouter.Use(loggingAndCORSHeadersMiddleware)
@@ -149,18 +147,31 @@ func main() {
 			Timeout: 5 * time.Second,
 		}),
 	)
-	proto.RegisterBotChatServer(
-		server,
-		src.NewChatManager(
-			Store,
-			hub,
-			filestoragePath,
-			urlDomain,
-			tokenFile,
-			credentialsFile,
-			proto.NewCalendarControllerClient(grcpConnCalendar),
-		),
+
+	dataStore := pgstore.NewPostgreSqlStore(db)
+	fileStore := localStore.NewLocalStore(
+		chatFilesPath,
+		homeworkFilesPath,
+		solutionFilesPath,
+		filestoragePath,
 	)
+
+	calendar := grpcCalendar.NewCalendarService(
+		protoCalendar.NewCalendarClient(grcpConnCalendar),
+	)
+
+	usecase := chatusecase.NewChatUsecase(
+		hub,
+		dataStore,
+		fileStore,
+		calendar,
+		filestoragePath,
+		urlDomain,
+	)
+
+	grpcHandler := grpcChat.NewChatGrpcHander(usecase)
+	protoChat.RegisterChatServer(server, grpcHandler)
+
 	log.Println("starting grpc server at " + conf.PortGRPC)
 	go server.Serve(lis)
 
@@ -170,5 +181,4 @@ func main() {
 	if err != nil {
 		log.Fatalln("cant serve", err)
 	}
-
 }
