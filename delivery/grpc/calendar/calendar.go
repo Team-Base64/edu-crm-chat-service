@@ -2,18 +2,19 @@ package calendar
 
 import (
 	"context"
+	"time"
+
 	d "main/delivery"
 	proto "main/delivery/grpc/calendar/proto"
 	e "main/domain/errors"
 	m "main/domain/model"
-	"time"
 )
 
 type CalendarService struct {
-	client proto.CalendarControllerClient
+	client proto.CalendarClient
 }
 
-func NewCalendarService(c proto.CalendarControllerClient) d.CalendarInterface {
+func NewCalendarService(c proto.CalendarClient) d.CalendarInterface {
 	return &CalendarService{
 		client: c,
 	}

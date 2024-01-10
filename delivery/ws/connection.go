@@ -51,9 +51,9 @@ func (c *ConnectionWS) readPump() {
 			log.Println(e.StacktraceError(err))
 			return
 		}
-		log.Println("Received mes from websocket: ", "text:", req.Text, "chatid:", req.ChatID, "attaches: ", req.AttachmentURLs)
+		log.Println("Received mes from websocket: ", "type: ", req.SocialType, " text:", req.Text, " chatid:", req.ChatID, " attaches: ", req.AttachmentURLs)
 		req.IsSavedToDB = true
-		switch type1 := req.SocialType; type1 {
+		switch req.SocialType {
 		case "tg":
 			c.hub.msgToTG <- req
 		case "vk":

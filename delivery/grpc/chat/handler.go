@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"log"
+	"time"
 
 	proto "main/delivery/grpc/chat/proto"
 	e "main/domain/errors"
@@ -12,24 +13,24 @@ import (
 )
 
 type ChatGrpcHandler struct {
-	proto.UnimplementedBotChatServer
+	proto.UnimplementedChatServer
 	uc u.UsecaseInterface
 }
 
-func NewChatGrpcHander(uc u.UsecaseInterface) proto.BotChatServer {
+func NewChatGrpcHander(uc u.UsecaseInterface) proto.ChatServer {
 	return &ChatGrpcHandler{
 		uc: uc,
 	}
 }
 
-func (h *ChatGrpcHandler) StartChatVK(ch proto.BotChat_StartChatVKServer) error {
+func (h *ChatGrpcHandler) StartChatVK(ch proto.Chat_StartChatVKServer) error {
 	log.Println("start chat vk")
 	defer log.Println("end chat vk")
 	var errSending error = nil
 	go func() {
 		for {
 			// отправка из вебсокета в бота
-			msg, err := h.uc.GetMsgForTG()
+			msg, err := h.uc.GetMsgForVK()
 
 			if err != nil {
 				errSending = e.StacktraceError(err)
@@ -86,7 +87,7 @@ func (h *ChatGrpcHandler) StartChatVK(ch proto.BotChat_StartChatVKServer) error 
 	}
 }
 
-func (h *ChatGrpcHandler) StartChatTG(ch proto.BotChat_StartChatTGServer) error {
+func (h *ChatGrpcHandler) StartChatTG(ch proto.Chat_StartChatTGServer) error {
 	log.Println("start chat tg")
 
 	defer log.Println("end chat tg")
@@ -154,7 +155,11 @@ func (h *ChatGrpcHandler) StartChatTG(ch proto.BotChat_StartChatTGServer) error 
 
 func (h *ChatGrpcHandler) UploadFile(ctx context.Context, req *proto.FileUploadRequest) (*proto.FileUploadResponse, error) {
 	log.Println("called grpc UploadFile", req.Mimetype, req.FileURL)
-	fileAddr, err := h.uc.LoadFile(req.Mimetype, req.FileURL, "chat")
+	fileAddr, err := h.uc.SaveFile(&m.Attach{
+		Dest:     "chat",
+		FileURL:  req.FileURL,
+		MimeType: req.Mimetype,
+	})
 
 	if err != nil {
 		log.Println(e.StacktraceError(err))
@@ -236,8 +241,8 @@ func (h *ChatGrpcHandler) GetHomeworks(ctx context.Context, req *proto.GetHomewo
 			HomeworkID:   int32(hw.HomeworkID),
 			Title:        hw.Title,
 			Description:  hw.Description,
-			CreateDate:   hw.CreateDate.String(),
-			DeadlineDate: hw.DeadlineDate.String(),
+			CreateDate:   hw.CreateDate.Format(time.RFC3339),
+			DeadlineDate: hw.DeadlineDate.Format(time.RFC3339),
 			Tasks:        []*proto.TaskData{},
 		}
 
@@ -261,6 +266,7 @@ func (h *ChatGrpcHandler) SendSolution(ctx context.Context, req *proto.SendSolut
 		HomeworkID:     int(req.HomeworkID),
 		Text:           req.Solution.Text,
 		AttachmentURLs: req.Solution.AttachmentURLs,
+		StudentID:      int(req.StudentID),
 	}); err != nil {
 		log.Println(e.StacktraceError(err))
 		return &proto.Nothing{}, err
@@ -296,8 +302,8 @@ func (h *ChatGrpcHandler) GetEvents(ctx context.Context, req *proto.GetEventsReq
 		protoEvents = append(protoEvents, &proto.EventData{
 			Id:          event.ID,
 			Title:       event.Title,
-			StartDate:   event.StartDate.String(),
-			EndDate:     event.EndDate.String(),
+			StartDate:   event.StartDate.Format(time.RFC3339),
+			EndDate:     event.EndDate.Format(time.RFC3339),
 			Description: event.Description,
 			ClassID:     int32(event.ClassID),
 		})

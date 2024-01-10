@@ -23,89 +23,89 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	CalendarController_GetEventsCalendar_FullMethodName = "/calendar.CalendarController/GetEventsCalendar"
+	Calendar_GetEventsCalendar_FullMethodName = "/calendar.Calendar/GetEventsCalendar"
 )
 
-// CalendarControllerClient is the client API for CalendarController service.
+// CalendarClient is the client API for Calendar service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type CalendarControllerClient interface {
+type CalendarClient interface {
 	GetEventsCalendar(ctx context.Context, in *GetEventsRequestCalendar, opts ...grpc.CallOption) (*GetEventsResponse, error)
 }
 
-type calendarControllerClient struct {
+type calendarClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewCalendarControllerClient(cc grpc.ClientConnInterface) CalendarControllerClient {
-	return &calendarControllerClient{cc}
+func NewCalendarClient(cc grpc.ClientConnInterface) CalendarClient {
+	return &calendarClient{cc}
 }
 
-func (c *calendarControllerClient) GetEventsCalendar(ctx context.Context, in *GetEventsRequestCalendar, opts ...grpc.CallOption) (*GetEventsResponse, error) {
+func (c *calendarClient) GetEventsCalendar(ctx context.Context, in *GetEventsRequestCalendar, opts ...grpc.CallOption) (*GetEventsResponse, error) {
 	out := new(GetEventsResponse)
-	err := c.cc.Invoke(ctx, CalendarController_GetEventsCalendar_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, Calendar_GetEventsCalendar_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// CalendarControllerServer is the server API for CalendarController service.
-// All implementations must embed UnimplementedCalendarControllerServer
+// CalendarServer is the server API for Calendar service.
+// All implementations must embed UnimplementedCalendarServer
 // for forward compatibility
-type CalendarControllerServer interface {
+type CalendarServer interface {
 	GetEventsCalendar(context.Context, *GetEventsRequestCalendar) (*GetEventsResponse, error)
-	mustEmbedUnimplementedCalendarControllerServer()
+	mustEmbedUnimplementedCalendarServer()
 }
 
-// UnimplementedCalendarControllerServer must be embedded to have forward compatible implementations.
-type UnimplementedCalendarControllerServer struct {
+// UnimplementedCalendarServer must be embedded to have forward compatible implementations.
+type UnimplementedCalendarServer struct {
 }
 
-func (UnimplementedCalendarControllerServer) GetEventsCalendar(context.Context, *GetEventsRequestCalendar) (*GetEventsResponse, error) {
+func (UnimplementedCalendarServer) GetEventsCalendar(context.Context, *GetEventsRequestCalendar) (*GetEventsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetEventsCalendar not implemented")
 }
-func (UnimplementedCalendarControllerServer) mustEmbedUnimplementedCalendarControllerServer() {}
+func (UnimplementedCalendarServer) mustEmbedUnimplementedCalendarServer() {}
 
-// UnsafeCalendarControllerServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to CalendarControllerServer will
+// UnsafeCalendarServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to CalendarServer will
 // result in compilation errors.
-type UnsafeCalendarControllerServer interface {
-	mustEmbedUnimplementedCalendarControllerServer()
+type UnsafeCalendarServer interface {
+	mustEmbedUnimplementedCalendarServer()
 }
 
-func RegisterCalendarControllerServer(s grpc.ServiceRegistrar, srv CalendarControllerServer) {
-	s.RegisterService(&CalendarController_ServiceDesc, srv)
+func RegisterCalendarServer(s grpc.ServiceRegistrar, srv CalendarServer) {
+	s.RegisterService(&Calendar_ServiceDesc, srv)
 }
 
-func _CalendarController_GetEventsCalendar_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Calendar_GetEventsCalendar_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetEventsRequestCalendar)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(CalendarControllerServer).GetEventsCalendar(ctx, in)
+		return srv.(CalendarServer).GetEventsCalendar(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: CalendarController_GetEventsCalendar_FullMethodName,
+		FullMethod: Calendar_GetEventsCalendar_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CalendarControllerServer).GetEventsCalendar(ctx, req.(*GetEventsRequestCalendar))
+		return srv.(CalendarServer).GetEventsCalendar(ctx, req.(*GetEventsRequestCalendar))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-// CalendarController_ServiceDesc is the grpc.ServiceDesc for CalendarController service.
+// Calendar_ServiceDesc is the grpc.ServiceDesc for Calendar service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var CalendarController_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "calendar.CalendarController",
-	HandlerType: (*CalendarControllerServer)(nil),
+var Calendar_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "calendar.Calendar",
+	HandlerType: (*CalendarServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
 			MethodName: "GetEventsCalendar",
-			Handler:    _CalendarController_GetEventsCalendar_Handler,
+			Handler:    _Calendar_GetEventsCalendar_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

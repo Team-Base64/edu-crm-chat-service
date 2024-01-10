@@ -2,10 +2,11 @@ package ws
 
 import (
 	"log"
+	"net/http"
+
 	d "main/delivery"
 	e "main/domain/errors"
 	m "main/domain/model"
-	"net/http"
 
 	"github.com/gorilla/websocket"
 )

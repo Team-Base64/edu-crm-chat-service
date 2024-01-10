@@ -24,6 +24,6 @@ message GetEventsResponse {
     repeated EventData events = 1;
 }
 
-service CalendarController {
+service Calendar {
     rpc GetEventsCalendar(GetEventsRequestCalendar) returns (GetEventsResponse);
 }
