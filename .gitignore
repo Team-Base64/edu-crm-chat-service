@@ -19,3 +19,9 @@
 
 # Go workspace file
 go.work
+
+config/DBconf.go
+commands_for_db.txt
+/filestorage
+credentials.json
+token.json

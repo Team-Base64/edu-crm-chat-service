@@ -1,0 +1,128 @@
+syntax = "proto3";
+
+// export PATH="$PATH:$(go env GOPATH)/bin"
+// go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+// protoc --go_out=. --go-grpc_out=. --go-grpc_opt=paths=source_relative --go_opt=paths=source_relative delivery/grpc/chat/proto/chat.proto
+
+package chat;
+option go_package = "./chat";
+
+message Message {
+    int32 chatID = 1;
+    string text = 2;
+    repeated string attachmentURLs = 3;
+}
+
+message FileUploadRequest {
+    string mimetype = 1;
+    string fileURL = 2;
+}
+
+message FileUploadResponse {
+    string internalFileURL = 1;
+}
+
+message TaskData {
+    string description = 1;
+    repeated string attachmentURLs = 2;
+}
+
+message HomeworkData {
+    int32 homeworkID = 1;
+    string title = 2;
+    string description = 3;
+    string createDate = 4;
+    string deadlineDate = 5;
+    repeated TaskData tasks = 6;
+}
+
+message GetHomeworksRequest {
+    int32 classID = 1;
+}
+
+message GetHomeworksResponse {
+    repeated HomeworkData homeworks = 1;
+}
+
+message SolutionData {
+    string text = 1;
+    repeated string attachmentURLs = 2;
+}
+
+message SendSolutionRequest {
+    int32 homeworkID = 1;
+    SolutionData solution = 2;
+    int32 studentID = 3;
+}
+
+message ValidateTokenRequest {
+    string token = 1;
+}
+
+message ValidateTokenResponse {
+    int32 classID = 1;
+}
+
+
+message CreateStudentRequest {
+    string name = 1;
+    string type = 2; // TG VK
+    string avatarURL = 3;
+    int32 classID = 4;
+}
+
+message CreateStudentResponse {
+    int32 studentID = 1;
+}
+
+message CreateChatRequest {
+    int32 studentID = 1;
+    int32 classID = 2;
+}
+
+message CreateChatResponse {
+    int32 internalChatID = 1;
+}
+
+message Nothing {}
+
+message BroadcastMessage {
+    int32 classID = 1;
+    string title = 2;
+    string description = 3;
+
+    repeated string attachmentURLs = 4;
+}
+
+message EventData {
+    string id = 1;
+    string title = 2;
+    string description = 3;
+    string startDate = 4;
+    string endDate = 5;
+    int32 classID = 6;
+}
+
+message GetEventsRequest {
+    int32 classID = 1;
+}
+
+message GetEventsResponse {
+    repeated EventData events = 1;
+}
+
+service Chat {
+    rpc BroadcastMsg(BroadcastMessage) returns (Nothing);
+    rpc SendNotification(Message) returns (Nothing);
+
+    rpc StartChatTG(stream Message) returns (stream Message);
+    rpc StartChatVK(stream Message) returns (stream Message);
+
+    rpc UploadFile(FileUploadRequest) returns (FileUploadResponse);
+    rpc ValidateToken (ValidateTokenRequest) returns (ValidateTokenResponse);
+    rpc CreateChat (CreateChatRequest) returns (CreateChatResponse);
+    rpc GetHomeworks (GetHomeworksRequest) returns (GetHomeworksResponse);
+    rpc CreateStudent(CreateStudentRequest) returns (CreateStudentResponse);
+    rpc SendSolution (SendSolutionRequest) returns (Nothing);
+    rpc GetEvents(GetEventsRequest) returns (GetEventsResponse);
+}
